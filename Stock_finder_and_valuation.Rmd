@@ -1,0 +1,170 @@
+---
+title: Search tool for possible undervalued Stocks with DCF and P/B and subsequent
+  Stock evaluation
+author: "Justin König"
+date: "20.08.2022"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    code_folding: show
+    theme: yeti
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+
+# clean environment
+
+rm(list=ls())
+cat("\014")
+
+# sets working directory to path in which the file is stored
+
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+
+# loads functions
+
+source("funcs/basics_data.R")
+source("funcs/basics_assignement.R")
+source("funcs/DCF_data_scraper.R")
+source("funcs/DCF_calculation.R")
+source("funcs/DCF_scraper_and_calculation_apply.R")
+source("funcs/bookv_data.R")
+```
+
+```{r packages, include = FALSE}
+
+# loads packages
+
+library(ggplot2)
+library(data.table)
+library(tidyr)
+library(tidyverse)
+library(XML)
+library(xml2)
+library(rvest)
+library(httr)
+library(dplyr)
+library(lubridate)
+```
+
+## Motivation
+Das wird mein Dokument
+
+
+```{r Stocks}
+
+# the chosen tickers of the Stocks are assigned with a vector to the variable 
+# Ticker
+
+# Ticker <-c("UNH", "GS", "DIS", "INTC", "BAC")
+
+Ticker <- "aapl"
+
+# creates a data frame out of the Tickers
+
+Stocks <- data.frame(Ticker)
+
+# variable Ticker is not longer needed, gets removed
+
+rm(Ticker)
+
+# uses the function basics_assignment on the data frame Stocks creating a list
+# and then only uses the part of the list which is further needed
+
+Stocks <- basics_assignement(Stocks)
+Stocks <- Stocks$list
+```
+$$\sum_{i=1}^n X_i$$
+```{r Scraper and Calculation on List, results='hide'}
+  toassaign_df <- Stocks
+  x<-1
+  FVoEq <-"FVoEq"
+  FVoEq <- data.frame(FVoEq)
+  PB <- "P/B"
+  PB <- data.frame(PB)
+  toassaign_df<- bind_cols(toassaign_df, FVoEq)
+  toassaign_df<- bind_cols(toassaign_df, PB)
+  
+  
+  while (x<=nrow(toassaign_df)) {
+    company <- toassaign_df[paste(x),1]
+    print(paste("checking Sector", x, "of",nrow(toassaign_df), "of", company))
+    ticker <- toassaign_df[paste(x),2]
+    check_for_fin <- isTRUE(toassaign_df[paste(x),3]=="Banks—Diversified" || toassaign_df[paste(x),3]=="Capital Markets" )
+    if(check_for_fin=="FALSE"){
+      print(paste("applying DCF scraper to", company))
+      scraped_DCF_data <- lapply(toassaign_df$Ticker[as.numeric(paste(x))],DCF_data_scraper)
+      print(paste("calculating fair value of equit of", company))
+      FVoEq <- DCF_calculation()
+      toassaign_df[paste(x),6] <- FVoEq$FVoEq
+      print(paste("applying book value scraper to", company))
+      toassaign_df[paste(x),7] <- bookv_data(ticker)
+    }
+    else {
+      print(paste("applying book value scraper to", company))
+      toassaign_df[paste(x),6] <- "NA"
+      toassaign_df[paste(x),7] <- bookv_data(ticker)
+    }
+    x<-x+1  
+  }
+
+Stocks <- toassaign_df
+rm(list=setdiff(ls(), "Stocks"))
+attach(Stocks)
+Stocks$Price <- as.numeric(Price)
+Stocks$PE <- as.numeric(PE)
+Stocks$FVoEq <- as.numeric(FVoEq)
+Stocks$PB <- as.numeric(PB)
+detach(Stocks)
+```
+
+```{r KA}
+ # takes all Companys of the Dataframe with a lower Price then its fair value
+ # and creates a new Dataframe out of it 
+
+picks_FVoEq <- Stocks[Stocks$Price < Stocks$FVoEq,]
+
+# removes all rows with NAs in it
+
+picks_FVoEq <- picks_FVoEq %>% drop_na()
+
+p_under_FVoEq  <- (1-round(picks_FVoEq$Price/picks_FVoEq$FVoEq, 2))*100
+
+p_under_FVoEq <- data.frame(p_under_FVoEq )
+
+picks_FVoEq <- bind_cols(picks_FVoEq, p_under_FVoEq)
+
+picks_FVoEq <- picks_FVoEq %>%
+  arrange(desc(p_under_FVoEq))
+  
+picks_FVoEq <- slice(picks_FVoEq,1)
+
+# takes all companys with a PB between 0 and 1.1 
+
+picks_fin <- Stocks[Stocks$PB < 1.1,]
+picks_fin <- picks_fin[picks_fin$PB > 0,]
+
+mean_PE <- mean(Stocks$PE)
+picks_PE <- Stocks[Stocks$PE < mean_PE,]
+picks_PE <- picks_PE[picks_PE$PE > 0,]
+
+picks <- data.frame(picks_FVoEq)
+picks <- bind_rows(picks, picks_fin, picks_PE)
+
+picks <- picks %>% distinct()
+
+picks <- picks[picks$PE < mean_PE,]
+
+picks_fin <- subset(picks, is.na(picks$FVoEq))
+picks_fin <- picks_fin[picks_fin$PB < 1.1,]
+
+picks <- picks %>% drop_na()
+
+picks <- bind_rows(picks, picks_fin)
+
+rownames(picks)<- c(1:nrow(picks))
+```
