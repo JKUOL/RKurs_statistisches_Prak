@@ -1,19 +1,37 @@
+
+
+scraped_DCF_data <- DCF_data_scraper(ticker = "aapl", GloGrow = 0.029, timeframe = 30)
+
 DCF_calculation <- function(yearly_data = scraped_DCF_data[[1]]$yearly_data, 
                             T0Data = scraped_DCF_data[[1]]$T0Data,
                             ProjRev = scraped_DCF_data[[1]]$ProjRev$ProjRev) {
+  
+  
+  
   
   # yearly_data <- scraped_DCF_data[[1]]$yearly_data
   # T0Data <- scraped_DCF_data[[1]]$T0Data
   # ProjRev <- scraped_DCF_data[[1]]$ProjRev$ProjRev
   
+  yearly_data <- scraped_DCF_data$yearly_data
+  T0Data <- scraped_DCF_data$T0Data
+  ProjRev <- scraped_DCF_data$ProjRev$ProjRev
+  
+  
   
   # calculates free cash flow to equity for the current and past 3 years 
   # TM stand for T minus year
   
-  FCFE <- c(yearly_data$TotalCashFlow[1]+yearly_data$CAPEX[1],
-            yearly_data$TotalCashFlow[2]+yearly_data$CAPEX[2],
-            yearly_data$TotalCashFlow[3]+yearly_data$CAPEX[3],
-            yearly_data$TotalCashFlow[4]+yearly_data$CAPEX[4])
+  # FCFE <- c(yearly_data$TotalCashFlow[1]+yearly_data$CAPEX[1],
+  #           yearly_data$TotalCashFlow[2]+yearly_data$CAPEX[2],
+  #           yearly_data$TotalCashFlow[3]+yearly_data$CAPEX[3],
+  #           yearly_data$TotalCashFlow[4]+yearly_data$CAPEX[4])
+  
+  FCFE <- c(yearly_data$TotalCashFlow[1]+yearly_data$CAPEX[1]+yearly_data$NetBorr[1],
+            yearly_data$TotalCashFlow[2]+yearly_data$CAPEX[2]+yearly_data$NetBorr[2],
+            yearly_data$TotalCashFlow[3]+yearly_data$CAPEX[3]+yearly_data$NetBorr[3],
+            yearly_data$TotalCashFlow[4]+yearly_data$CAPEX[4]+yearly_data$NetBorr[4])
+  
   
   FCFE <- data.frame(FCFE)
   yearly_data <- bind_cols(yearly_data,FCFE)
@@ -83,6 +101,9 @@ DCF_calculation <- function(yearly_data = scraped_DCF_data[[1]]$yearly_data,
   Projection <- bind_cols(Projection,NetIncome_Proj)
   
   # Projects the future free cash flow to equity
+  
+  # bis hier rechnungen gut !!!
+  
   
   FCFE_Proj <- c(Projection$NetIncome_Proj[1]*T0_cal$FCFEpNetIncmin,
                  Projection$NetIncome_Proj[2]*T0_cal$FCFEpNetIncmin,

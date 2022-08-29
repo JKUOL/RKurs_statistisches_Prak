@@ -62,7 +62,7 @@ Das wird mein Dokument
 
 # Ticker <-c("UNH", "GS", "DIS", "INTC", "BAC")
 
-Ticker <- "aapl"
+Ticker <- c("aapl", )
 
 # creates a data frame out of the Tickers
 

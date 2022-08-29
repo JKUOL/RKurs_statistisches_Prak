@@ -105,10 +105,12 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   CAPEX <- gsub("{\"raw\":", "", CAPEX, fixed=T)
   CAPEX <- gsub(",", "", CAPEX, fixed=T)
   CAPEX <- as.numeric(CAPEX)
+  CAPEX <- CAPEX*-1
   CAPEX <- rev(CAPEX)
   CAPEX <- data.frame(CAPEX)
   yearly_data <- bind_cols(yearly_data, CAPEX)
 
+  
   
   # extracts NetIncome 
   
@@ -195,7 +197,7 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   LongDebt <- qdapRegex::ex_between(LongDebt, "\"raw\":", ",\"fmt\":\"")[[1]]
   LongDebt <- rev(LongDebt)
   LongDebt <- LongDebt[1]
-  LongDebt <- as.numeric(LongDebt)*-1
+  LongDebt <- as.numeric(LongDebt)
   LongDebt <- data.frame(LongDebt)
   T0Data <- bind_cols(T0Data,LongDebt)
   
@@ -208,7 +210,7 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   CurrDebt <- qdapRegex::ex_between(CurrDebt, "\"raw\":", ",\"fmt\":\"")[[1]]
   CurrDebt <- rev(CurrDebt)
   CurrDebt <- CurrDebt[1]
-  CurrDebt <- as.numeric(CurrDebt)*-1
+  CurrDebt <- as.numeric(CurrDebt)
   CurrDebt <- data.frame(CurrDebt)
   T0Data <- bind_cols(T0Data,CurrDebt)
   
@@ -266,6 +268,15 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   T0Data <- bind_cols(T0Data,AvRet)
   
   T0Data<-data.frame(T0Data,GloGrow)
+  
+  # extracts Net Debt 
+  
+  NetBorr <- qdapRegex::ex_between(html_cf, "annualNetIssuancePaymentsOfDebt", "trailing")[[1]]
+  NetBorr <- qdapRegex::ex_between(NetBorr, "{\"raw\":", ",\"fmt\"")[[1]]
+  NetBorr <- NetBorr[1:4]
+  NetBorr <- as.numeric(NetBorr)
+  NetBorr <- data.frame(NetBorr)
+  yearly_data <- bind_cols(yearly_data, NetBorr)
   
   out <- list(
     yearly_data = yearly_data,
