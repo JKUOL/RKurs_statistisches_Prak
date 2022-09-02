@@ -1,6 +1,6 @@
 
 
-scraped_DCF_data <- DCF_data_scraper(ticker = "aapl", GloGrow = 0.029, timeframe = 30)
+# scraped_DCF_data <- DCF_data_scraper(ticker = "aapl", GloGrow = 0.029, timeframe = 30)
 
 DCF_calculation <- function(yearly_data = scraped_DCF_data[[1]]$yearly_data, 
                             T0Data = scraped_DCF_data[[1]]$T0Data,
@@ -13,9 +13,9 @@ DCF_calculation <- function(yearly_data = scraped_DCF_data[[1]]$yearly_data,
   # T0Data <- scraped_DCF_data[[1]]$T0Data
   # ProjRev <- scraped_DCF_data[[1]]$ProjRev$ProjRev
   
-  yearly_data <- scraped_DCF_data$yearly_data
-  T0Data <- scraped_DCF_data$T0Data
-  ProjRev <- scraped_DCF_data$ProjRev$ProjRev
+  # yearly_data <- scraped_DCF_data$yearly_data
+  # T0Data <- scraped_DCF_data$T0Data
+  # ProjRev <- scraped_DCF_data$ProjRev$ProjRev
   
   
   

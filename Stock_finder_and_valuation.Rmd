@@ -33,6 +33,12 @@ source("funcs/DCF_data_scraper.R")
 source("funcs/DCF_calculation.R")
 source("funcs/DCF_scraper_and_calculation_apply.R")
 source("funcs/bookv_data.R")
+source("funcs/calenderization.R")
+source("funcs/DCF_data_scraper_v2.R")
+source("funcs/DCF_calculation_v2.R")
+source("funcs/calenderization.R")
+source("funcs/Imp_Share_Price_calculation.R")
+source("funcs/WACC_calculation.R")
 ```
 
 ```{r packages, include = FALSE}
@@ -49,6 +55,10 @@ library(rvest)
 library(httr)
 library(dplyr)
 library(lubridate)
+library(quantmod)
+library(tidyquant)
+library(ggrepel)
+library(DiagrammeR)
 ```
 
 ## Motivation
@@ -60,9 +70,7 @@ Das wird mein Dokument
 # the chosen tickers of the Stocks are assigned with a vector to the variable 
 # Ticker
 
-# Ticker <-c("UNH", "GS", "DIS", "INTC", "BAC")
-
-Ticker <- c("aapl", )
+Ticker <-c("EOAN.DE", "GS", "MSFT", "AAPL", "BAC", "CRM", "NVDA", "NKE", "MS")
 
 # creates a data frame out of the Tickers
 
@@ -82,11 +90,11 @@ $$\sum_{i=1}^n X_i$$
 ```{r Scraper and Calculation on List, results='hide'}
   toassaign_df <- Stocks
   x<-1
-  FVoEq <-"FVoEq"
-  FVoEq <- data.frame(FVoEq)
+  DCF_ISP <-"DCF_ISP"
+  DCF_ISP <- data.frame(DCF_ISP)
   PB <- "P/B"
   PB <- data.frame(PB)
-  toassaign_df<- bind_cols(toassaign_df, FVoEq)
+  toassaign_df<- bind_cols(toassaign_df, DCF_ISP)
   toassaign_df<- bind_cols(toassaign_df, PB)
   
   
@@ -99,72 +107,159 @@ $$\sum_{i=1}^n X_i$$
       print(paste("applying DCF scraper to", company))
       scraped_DCF_data <- lapply(toassaign_df$Ticker[as.numeric(paste(x))],DCF_data_scraper)
       print(paste("calculating fair value of equit of", company))
-      FVoEq <- DCF_calculation()
-      toassaign_df[paste(x),6] <- FVoEq$FVoEq
+      #required rate of return
+      DCF_calc_data <- DCF_calculation()
+      WACC_data <- WACC_calculation()
+        if(isTRUE(WACC_data$T0_cal$WACC>0.05)){
+        RRR <- WACC_data$T0_cal$WACC
+        }else {
+        RRR <- 0.075
+        }
+      ISP <- Imp_Share_Price_calculation()
+      ISP <- ISP$ISP_data
+      toassaign_df[paste(x),7] <- ISP
       print(paste("applying book value scraper to", company))
-      toassaign_df[paste(x),7] <- bookv_data(ticker)
+      toassaign_df[paste(x),8] <- bookv_data(ticker)
     }
     else {
       print(paste("applying book value scraper to", company))
-      toassaign_df[paste(x),6] <- "NA"
-      toassaign_df[paste(x),7] <- bookv_data(ticker)
+      toassaign_df[paste(x),7] <- "NA"
+      toassaign_df[paste(x),8] <- bookv_data(ticker)
     }
     x<-x+1  
   }
-
+toassaign_df$PB <- as.numeric(toassaign_df$PB)
+toassaign_df$DCF_ISP <- as.numeric(toassaign_df$DCF_ISP)  
+toassaign_df$Price <- as.numeric(toassaign_df$Price)
+toassaign_df$PE <- as.numeric(toassaign_df$PE)
 Stocks <- toassaign_df
-rm(list=setdiff(ls(), "Stocks"))
-attach(Stocks)
-Stocks$Price <- as.numeric(Price)
-Stocks$PE <- as.numeric(PE)
-Stocks$FVoEq <- as.numeric(FVoEq)
-Stocks$PB <- as.numeric(PB)
-detach(Stocks)
 ```
 
 ```{r KA}
  # takes all Companys of the Dataframe with a lower Price then its fair value
  # and creates a new Dataframe out of it 
 
-picks_FVoEq <- Stocks[Stocks$Price < Stocks$FVoEq,]
+picks_DCF_ISP <- Stocks[Stocks$Price < Stocks$DCF_ISP,]
 
 # removes all rows with NAs in it
 
-picks_FVoEq <- picks_FVoEq %>% drop_na()
+picks_DCF_ISP <- picks_DCF_ISP %>% drop_na()
 
-p_under_FVoEq  <- (1-round(picks_FVoEq$Price/picks_FVoEq$FVoEq, 2))*100
+p_under_DCF_ISP <- (1-round(picks_DCF_ISP$Price/picks_DCF_ISP$DCF_ISP, 2))*100
 
-p_under_FVoEq <- data.frame(p_under_FVoEq )
+p_under_DCF_ISP <- data.frame(p_under_DCF_ISP)
 
-picks_FVoEq <- bind_cols(picks_FVoEq, p_under_FVoEq)
+picks_DCF_ISP<- bind_cols(picks_DCF_ISP,p_under_DCF_ISP)
 
-picks_FVoEq <- picks_FVoEq %>%
-  arrange(desc(p_under_FVoEq))
+picks_DCF_ISP <- picks_DCF_ISP %>%
+  arrange(desc(p_under_DCF_ISP))
   
-picks_FVoEq <- slice(picks_FVoEq,1)
+picks_DCF_ISP <- slice(picks_DCF_ISP,1:2)
 
 # takes all companys with a PB between 0 and 1.1 
 
-picks_fin <- Stocks[Stocks$PB < 1.1,]
+picks_fin <- Stocks %>% filter(
+  Industry == "Banks—Diversified" | Industry == "Capital Markets")
+picks_fin <- picks_fin[picks_fin$PB < 1.5,]
 picks_fin <- picks_fin[picks_fin$PB > 0,]
+picks_fin <- picks_fin %>%
+  arrange(PB)
+picks_fin <- slice(picks_fin,1:2)
 
-mean_PE <- mean(Stocks$PE)
-picks_PE <- Stocks[Stocks$PE < mean_PE,]
-picks_PE <- picks_PE[picks_PE$PE > 0,]
-
-picks <- data.frame(picks_FVoEq)
-picks <- bind_rows(picks, picks_fin, picks_PE)
-
-picks <- picks %>% distinct()
-
-picks <- picks[picks$PE < mean_PE,]
-
-picks_fin <- subset(picks, is.na(picks$FVoEq))
-picks_fin <- picks_fin[picks_fin$PB < 1.1,]
-
-picks <- picks %>% drop_na()
-
+picks <- data.frame(picks_DCF_ISP)
 picks <- bind_rows(picks, picks_fin)
+picks <- slice(picks, )
+droping <- "p_under_DCF_ISP"
+
+picks <- picks[ , !(names(picks) %in% droping)]
+
+
+# picks <- picks %>% distinct()
 
 rownames(picks)<- c(1:nrow(picks))
+
+picks <- picks %>% 
+    rename(
+      "P/E" = PE,
+      "Implied share value" = DCF_ISP,
+      "P/B" = PB
+    )
+
+grViz("digraph flowchart {
+      # node definitions with substituted label text
+      node [fontname = Helvetica, shape = rectangle]        
+      tab1 [label = '@@1']
+      tab2 [label = '@@2']
+      tab3 [label = '@@3']
+      tab4 [label = '@@4']
+      tab5 [label = '@@5']
+      tab6 [label = '@@6']
+      tab7 [label = '@@7']
+      tab8 [label = '@@8']
+      tab9 [label = '@@9']
+     
+      # edge definitions with the node IDs
+      tab1 -> tab2 -> tab4 -> tab5 -> tab6 -> tab7
+      tab1 -> tab3 -> tab8 -> tab9 -> tab6
+    
+    
+      }
+
+      [1]: 'Stocks'
+      [2]: 'Non Financial Stocks'
+      [3]: 'P/B between 0 and 1.5'
+      [4]: 'Price lower as DCF implied share price'
+      [5]: 'Top 2 highest ISP diff to Price'
+      [6]: 'Picks to watch'
+      [7]: 'Deeper analysis'
+      [8]: 'Financial Stocks'
+      [9]: 'Top 2 lowest P/B'
+     
+      
+      ")
+```
+
+```{r Stock chart comperisisson}
+
+# the chosen tickers of the Stocks are assigned with a vector to the variable 
+# Ticker
+
+ticker <- picks$Ticker
+
+# counts 5 years into the past and sets it as start date for the plots
+  
+start_date <- ymd(format(Sys.Date())) - years(5)
+
+prices <- tq_get(ticker,
+                 from = start_date,
+                 to = format(Sys.Date()),
+                 get = "stock.prices")
+
+prices <- prices %>% 
+    rename(
+      ticker = symbol,
+    )
+
+mean <- prices %>% group_by(ticker)%>%summarise(mean_val=mean(adjusted))
+curr <- picks %>% arrange(Ticker)
+curr <- curr$Currency
+curr <- data.frame(curr)
+
+mean <- bind_cols(mean, curr)
+
+print(plot <- prices %>%
+          ggplot(aes(x = date, y = adjusted, color = ticker)) +
+          geom_line()+
+          geom_hline(data = mean, aes(yintercept = mean_val, color = ticker))+
+          facet_wrap(~ticker,scales = 'free_y')+
+          theme_classic()+
+          labs(x = 'Year',
+           y = "Adjusted Price",
+           title = "Stocks to watch") +
+           scale_x_date(date_breaks = "year",
+               date_labels = "%y")+
+          geom_text(data = mean, aes(x = prices$date[250], y = mean_val, label = paste(round(mean_val,2), curr), vjust = -0.3), show.legend = F))
+          
+
+
 ```

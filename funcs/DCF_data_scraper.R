@@ -5,9 +5,9 @@
 
 DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   
-  # ticker <- "aapl"
-  # GloGrow <- 0.029
-  # timeframe <- 30
+  ticker <- "aapl"
+  GloGrow <- 0.029
+  timeframe <- 30
   
   # current Year and start Date for the exrtaction of the av. Return of S&P500
   
@@ -45,20 +45,14 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   html_ret <- read_html(url_ret) %>% html_node('body') %>% 
     html_text() %>% toString()
   
-  print("extracting Currency and Revenue")
+  print("extracting Revenue")
   
   # extracts Years, gathers all text in the HTML_text between the specified passages
   # and creates a dataframe for the yearly data
   
   year <- qdapRegex::ex_between(html_fin, "financialsChart\":{\"yearly\":", "quarterly\":[{\"")[[1]]
   year <- qdapRegex::ex_between(year, "{\"date\":", ",\"revenue\"")[[1]]
-  yearly_data <- data.frame(year)
-  
-  # extracts Currency
-  
-  curr <- qdapRegex::ex_between(html_fin, "financialCurrency\":\"", "\"},\"price")[[1]]
-  curr <- data.frame(curr)
-  yearly_data <- bind_cols(yearly_data, curr)
+  yearly_data <- data.frame(t(year))
   
   # extracts revenue and renames it to Total revnenue
   

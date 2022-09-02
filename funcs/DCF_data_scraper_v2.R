@@ -1,13 +1,13 @@
 # creates a function to acquire the needed Data for the Calculation of
 # Fair Value of Equity with the DCF Method
-# the needed Variables are the ticker the expected Growth of the global 
+# the needed Variables are the ticker the expected TGR of the global 
 # economy and the timeframe for the average Return of the S%P500 of the past
 
-DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
+DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
   
-  ticker <- "aapl"
-  GloGrow <- 0.029
-  timeframe <- 30
+  # ticker <- "VZ"
+  # TGR <- 0.025
+  # timeframe <- 30
   
   # current Year and start Date for the exrtaction of the av. Return of S&P500
   
@@ -44,6 +44,14 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
                     start,'?amount=100&endYear=',curYear)
   html_ret <- read_html(url_ret) %>% html_node('body') %>% 
     html_text() %>% toString()
+  
+  url_risk_prem<-read_html('https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html')
+  
+  # because qdapRegex::ex_between seems to not work on the out html_text
+  # another node was chosen which outputs the table shown on the url
+  
+  url_risk_prem <- url_risk_prem %>% html_nodes("td") %>%
+    html_text()
   
   print("extracting Revenue")
   
@@ -88,9 +96,9 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   
   print("extractin EBIT")
   
-  EBIT <- qdapRegex::ex_between(html_fin, "annualTotalOperatingIncomeAsReported", "annual")[[1]]
+  EBIT <- qdapRegex::ex_between(html_fin, "annualOperatingIncome", "annual")[[1]]
   EBIT <- qdapRegex::ex_between(EBIT, "{\"raw\":", ",\"fmt\"")[[1]]
-  EBIT <- as.numeric(EBIT)
+  EBIT <- as.numeric(EBIT[1:4])
   EBIT <- data.frame(EBIT)
   yearly_data <- bind_cols(yearly_data, EBIT)
   
@@ -99,8 +107,7 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   print("extracting income tax expense")
   
   IncTaxEx <- qdapRegex::ex_between(html_balance, "\"incomeTaxExpense\":{\"raw\":", ",\"fmt\":")[[1]]
-  IncTaxEx <- rev(IncTaxEx)
-  IncTaxEx <- IncTaxEx[1:4]
+  IncTaxEx <- rev(IncTaxEx[5:8])
   IncTaxEx <- as.numeric(IncTaxEx)
   IncTaxEx <- data.frame(IncTaxEx)
   yearly_data <- bind_cols(yearly_data,IncTaxEx)
@@ -111,6 +118,7 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   
   DandA <- qdapRegex::ex_between(html_fin, "annualReconciledDepreciation", "trailing")[[1]]
   DandA <- qdapRegex::ex_between(DandA, "\"raw\":", ",\"fmt\":")[[1]]
+  DandA <- DandA[1:4]
   DandA <- as.numeric(DandA)
   DandA <- data.frame(DandA)
   yearly_data <- bind_cols(yearly_data,DandA)
@@ -138,8 +146,6 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   cNWC <- data.frame(cNWC)
   yearly_data <- bind_cols(yearly_data, cNWC)
   
- 
-  
   # extracts fiscal year end and calculates the percantage of the year in which 
   # the month lays
   
@@ -151,58 +157,19 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   rateofffye <- fyemonth/12
   T0Data <- data.frame(rateofffye)
   
-  
-  
   ## aktueller stand der neu bearbeitung ##
   
+  # extracts Market Cap
   
+  print("extracting Market Cap")
   
-  print("extracting Total Cash Flow")
-
+  MarkCap <- qdapRegex::ex_between(html_stats, "trailingMarketCap", "\"fmt\":\"")[[1]]
+  MarkCap <- qdapRegex::ex_between(MarkCap, "\"raw\":", ",")[[1]]
+  MarkCap <- as.numeric(MarkCap)
+  MarkCap <- data.frame(MarkCap)
+  T0Data <- bind_cols(T0Data,MarkCap)
   
-
-  # extracts Total Cash Flow from operating activities 
-  
-  TCF <- qdapRegex::ex_between(html_cf, "\"totalCashFromOperatingActivities\":", "\"fmt\"")[[1]]
-  TCF <- TCF[1:4]
-  
-  # replaces unwanted components of the vector 
-  
-  TCF <- gsub("{\"raw\":", "", TCF, fixed=T)
-  TCF <- gsub(",", "", TCF, fixed=T)
-  TCF <- as.numeric(TCF)
-  
-  # Yahoo Finance has the Dates in reveresed Ordern sometimes in reveresed order
-  # rev() is used to  reverese the order into the needed form
-  
-  TCF<-rev(TCF)
-  
-  # TCF is renamed in the Data frame to TotalCashFlow
-  
-  TCF <- data.frame(TCF)
-  TCF <- TCF %>% 
-    rename(
-      TotalCashFlow = TCF    
-    )
-  yearly_data <- bind_cols(yearly_data, TCF)    
-  
-
-  
-  
-  # extracts NetIncome 
-  
-  print("extracting Net Income")
-  
-  NetIncome <- qdapRegex::ex_between(html_cf, "\"netIncome\":", "\"fmt\"")[[1]]
-  NetIncome <- NetIncome[1:4]
-  NetIncome <- gsub("{\"raw\":", "", NetIncome, fixed=T)
-  NetIncome <- gsub(",", "", NetIncome, fixed=T)
-  NetIncome <- as.numeric(NetIncome)
-  NetIncome <- rev(NetIncome)
-  NetIncome <- data.frame(NetIncome)
-  yearly_data <- bind_cols(yearly_data, NetIncome)
-  
-  #extracts 10 Year Bondrate (R_f) 
+  #extracts 10 Year Bondrate (R_f (risc free rate))
   
   print("extracting 10 Year Bond Rates")
   
@@ -221,62 +188,13 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   Beta <- data.frame(Beta)
   T0Data <- bind_cols(T0Data,Beta)
   
-  # extracts Market Cap
+ # extracts equity risk premium from the usa 
   
-  print("extracting Market Cap")
-  
-  MarkCap <- qdapRegex::ex_between(html_stats, "trailingMarketCap", "\"fmt\":\"")[[1]]
-  MarkCap <- qdapRegex::ex_between(MarkCap, "\"raw\":", ",")[[1]]
-  MarkCap <- as.numeric(MarkCap)
-  MarkCap <- data.frame(MarkCap)
-  T0Data <- bind_cols(T0Data,MarkCap)
-  
-  # extracts Total Debt
-  
-  print("extracting Total Debt")
-  
-  TotDebt <- qdapRegex::ex_between(html_balance, "annualTotalDebt", "annual")[[1]]
-  TotDebt <- str_split(TotDebt, "\"raw\"")
-  TotDebt <- TotDebt[[1]]
-  TotDebt <- rev(TotDebt)[1]
-  TotDebt <- qdapRegex::ex_between(TotDebt, ":", ",\"fmt\"")[[1]]
-  TotDebt <- as.numeric(TotDebt)
-  TotDebt <- data.frame(TotDebt)
-  T0Data <- bind_cols(T0Data,TotDebt)
-  
-  # extracts outstanding shares
-  
-  print("extracting Outstanding Shares")
-  
-  floatshares <- qdapRegex::ex_between(html_stats, "\"floatShares\":{\"raw\":", ",\"fmt\"")[[1]]
-  floatshares <- as.numeric(floatshares)
-  floatshares <- data.frame(floatshares)
-  T0Data <- bind_cols(T0Data,floatshares)
-  
-  # extracts Interest Expense
-  
-  print("extracting Interest Expense")
-  
-  IntExpense <- qdapRegex::ex_between(html_fin, "interestExpense\":{\"raw\":", ",\"fmt\"")[[1]]
-  IntExpense <- IntExpense[5]
-  IntExpense <- as.numeric(IntExpense)
-  IntExpense <- data.frame(IntExpense)
-  T0Data <- bind_cols(T0Data,IntExpense)
-  
-  # extracts long term Debt
-  # only the latest number is needed, because some Companys only show the latest
-  # 3 years (ex. MSFT) the long Debt is reveresed and the first number is used
-  # to extractr the current Debt
-  
-  print("extracting long term Debt")
-  
-  LongDebt <- qdapRegex::ex_between(html_balance, "LongTermDebt\":[{\"", "annual")[[1]]
-  LongDebt <- qdapRegex::ex_between(LongDebt, "\"raw\":", ",\"fmt\":\"")[[1]]
-  LongDebt <- rev(LongDebt)
-  LongDebt <- LongDebt[1]
-  LongDebt <- as.numeric(LongDebt)
-  LongDebt <- data.frame(LongDebt)
-  T0Data <- bind_cols(T0Data,LongDebt)
+  erp <- url_risk_prem[1103]
+  erp <- gsub("%", "", erp, fixed=T)
+  erp <- as.numeric(erp)/100
+  erp <- data.frame(erp)
+  T0Data <- bind_cols(T0Data,erp)
   
   # extracts current Debt
   
@@ -291,6 +209,38 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   CurrDebt <- data.frame(CurrDebt)
   T0Data <- bind_cols(T0Data,CurrDebt)
   
+  # extracts long term Debt
+  
+  print("extracting long term Debt")
+  
+  LongDebt <- qdapRegex::ex_between(html_balance, "longTermDebt\"", "inventory")[[1]]
+  LongDebt <- qdapRegex::ex_between(LongDebt, "\"raw\":", ",\"fmt\":\"")[[1]]
+  LongDebt <- LongDebt[1]
+  LongDebt <- as.numeric(LongDebt)
+  LongDebt <- data.frame(LongDebt)
+  T0Data <- bind_cols(T0Data,LongDebt)
+  
+  
+  # extracts Interest Expense
+  
+  print("extracting Interest Expense")
+  
+  IntExpense <- qdapRegex::ex_between(html_fin, "annualInterestExpense", "annual")[[1]]
+  IntExpense <- qdapRegex::ex_between(IntExpense, "{\"raw\":", ",\"fmt\"")[[1]]
+  IntExpense <- rev(IntExpense)
+  IntExpense <- IntExpense[1]
+  IntExpense <- as.numeric(IntExpense)
+  IntExpense <- data.frame(IntExpense)
+  T0Data <- bind_cols(T0Data,IntExpense)
+  
+  # extracts outstanding shares
+  
+  print("extracting Outstanding Shares")
+  
+  floatshares <- qdapRegex::ex_between(html_stats, "\"floatShares\":{\"raw\":", ",\"fmt\"")[[1]]
+  floatshares <- as.numeric(floatshares)
+  floatshares <- data.frame(floatshares)
+  T0Data <- bind_cols(T0Data,floatshares)
 
   # extracts pre income tax
   
@@ -304,9 +254,7 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   
   # extracts projected revenue and number of Analysts, number of Analysts 
   # can be used to determine the reliability of the forecast
-  
- 
-  
+
   print(paste("extracting Average Return of S&P 500 over Timeframe of", timeframe, "years"))
   
   # extracts the avr. rate of return for the S$P 500 in the given timeframe
@@ -317,7 +265,7 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   AvRet <- data.frame(AvRet)
   T0Data <- bind_cols(T0Data,AvRet)
   
-  T0Data<-data.frame(T0Data,GloGrow)
+  T0Data<-data.frame(T0Data,TGR)
   
   # extracts Net Debt 
   
@@ -328,8 +276,12 @@ DCF_data_scraper <- function(ticker, GloGrow = 0.029, timeframe = 30) {
   NetBorr <- data.frame(NetBorr)
   yearly_data <- bind_cols(yearly_data, NetBorr)
   
-  
-
+  cash <- NetBorr <- qdapRegex::ex_between(html_balance, "otherAssets", "total")[[1]]
+  cash <- NetBorr <- qdapRegex::ex_between(html_balance, "\"cash\":{\"raw\":", ",\"fmt\":")[[1]]
+  cash <- cash[1]
+  cash <- as.numeric(cash)
+  cash <- data.frame(cash)
+  T0Data <- bind_cols(T0Data, cash)
   
   out <- list(
     yearly_data = yearly_data,

@@ -3,6 +3,8 @@
 
 basics_data <- function(ticker) {
   
+  
+  
   # assignes the URL of the ticker to a Variable and reads the HTML text
   
   url_profile <- paste0('https://finance.yahoo.com/quote/', ticker)
@@ -10,6 +12,10 @@ basics_data <- function(ticker) {
   html_profile <- read_html(url_profile) %>% html_node('body') %>% 
     html_text() %>% 
     toString()
+  url_fin <- paste0('https://finance.yahoo.com/quote/', 
+                    ticker, '/financials?p=', ticker)
+  html_fin <- read_html(url_fin) %>% html_node('body') %>% 
+    html_text() %>% toString()
   
   # extracts Price Price, gathers all text in the HTML_text between the specified passages
   # converts it into a numeric argument and rounds it to 2 decimal points
@@ -23,7 +29,11 @@ basics_data <- function(ticker) {
   Industry <- qdapRegex::ex_between(html_profile, "industry\":\"", "\"")[[1]]
   Industry <- Industry[1]
   
+  # extracts Currency
   
+  Currency <- qdapRegex::ex_between(html_fin, "financialCurrency\":\"", "\"},\"price")[[1]]
+  Currency <- data.frame(Currency)
+
   # extracts the EPS, uses only the first variable of the 
   # data which is extracted, because there are more then one passage with the
   # word matching in the HTML_text
@@ -50,7 +60,8 @@ basics_data <- function(ticker) {
     Price = Price,
     Industry = Industry,
     PE = PE,
-    Company = Company
+    Company = Company,
+    Currency = Currency
   )
   return(out)
 }

@@ -1,8 +1,8 @@
 # takes a data frame and calculates the Calenderised data for it 
 
 calenderization <- function(toassaign_df) {
- 
-  # toassaign_df <- past_and_proj
+
+  rateofffye <- scraped_DCF_data[[1]]$T0Data$rateofffye
  
   # assigns the count 2 to the variable y so the second colum gets accessed
   
