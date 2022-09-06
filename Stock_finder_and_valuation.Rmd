@@ -59,6 +59,12 @@ library(quantmod)
 library(tidyquant)
 library(ggrepel)
 library(DiagrammeR)
+
+
+library(gt)
+library(glue)
+
+
 ```
 
 ## Motivation
@@ -97,7 +103,6 @@ $$\sum_{i=1}^n X_i$$
   toassaign_df<- bind_cols(toassaign_df, DCF_ISP)
   toassaign_df<- bind_cols(toassaign_df, PB)
   
-  
   while (x<=nrow(toassaign_df)) {
     company <- toassaign_df[paste(x),1]
     print(paste("checking Sector", x, "of",nrow(toassaign_df), "of", company))
@@ -106,15 +111,10 @@ $$\sum_{i=1}^n X_i$$
     if(check_for_fin=="FALSE"){
       print(paste("applying DCF scraper to", company))
       scraped_DCF_data <- lapply(toassaign_df$Ticker[as.numeric(paste(x))],DCF_data_scraper)
-      print(paste("calculating fair value of equit of", company))
+      print(paste("calculating fair value of", company))
       #required rate of return
       DCF_calc_data <- DCF_calculation()
       WACC_data <- WACC_calculation()
-        if(isTRUE(WACC_data$T0_cal$WACC>0.05)){
-        RRR <- WACC_data$T0_cal$WACC
-        }else {
-        RRR <- 0.075
-        }
       ISP <- Imp_Share_Price_calculation()
       ISP <- ISP$ISP_data
       toassaign_df[paste(x),7] <- ISP
@@ -126,7 +126,7 @@ $$\sum_{i=1}^n X_i$$
       toassaign_df[paste(x),7] <- "NA"
       toassaign_df[paste(x),8] <- bookv_data(ticker)
     }
-    x<-x+1  
+    x<-x+1
   }
 toassaign_df$PB <- as.numeric(toassaign_df$PB)
 toassaign_df$DCF_ISP <- as.numeric(toassaign_df$DCF_ISP)  
@@ -185,6 +185,10 @@ picks <- picks %>%
       "P/B" = PB
     )
 
+
+```
+
+```{r Flow Chart}
 grViz("digraph flowchart {
       # node definitions with substituted label text
       node [fontname = Helvetica, shape = rectangle]        
@@ -218,6 +222,7 @@ grViz("digraph flowchart {
       
       ")
 ```
+
 
 ```{r Stock chart comperisisson}
 
@@ -258,8 +263,82 @@ print(plot <- prices %>%
            title = "Stocks to watch") +
            scale_x_date(date_breaks = "year",
                date_labels = "%y")+
-          geom_text(data = mean, aes(x = prices$date[250], y = mean_val, label = paste(round(mean_val,2), curr), vjust = -0.3), show.legend = F))
+          geom_text(data = mean, aes(x = prices$date[250], y = mean_val, label = paste("avg.", round(mean_val,2), curr), vjust = -0.3), show.legend = F))
           
+```
+
+```{r Stock chart comperisisson}
+
+ticker <- "NKE"
+Ticker <- data.frame(ticker)
+
+
+Stock <- basics_assignement(Ticker)
+scraped_DCF_data <- lapply(ticker, DCF_data_scraper)
+DCF_calc_data <- DCF_calculation()
+WACC_data <- WACC_calculation()
+
+attach(DCF_calc_data$calended_data)
+
+# all Prices in Millions $ 
+
+DCF_data_CYE <- data.frame(DCF_calc_data$calended_data[2:9])
+DCF_data_CYE <- round(DCF_data_CYE[1:8]/1000000)
+p_growth <- c("-", (TotalRevenue[2:9]/TotalRevenue[1:8]-1))
+DCF_data_CYE <- add_column(DCF_data_CYE, p_growth = p_growth, .after = "TotalRevenue")
+Operating_Margin <- EBIT[1:9]/TotalRevenue[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, Operating_Margin = Operating_Margin, .after = "EBIT")
+p_of_EBIT <- IncTaxEx[1:9]/EBIT[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, p_of_EBIT = p_of_EBIT, .after = "IncTaxEx")
+DandA_p_of_Rev <- DandA[1:9]/TotalRevenue[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, DandA_p_of_Rev = DandA_p_of_Rev, .after = "DandA")
+CapEx_p_of_Rev <- CAPEX[1:9]/TotalRevenue[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, CapEx_p_of_Rev = CapEx_p_of_Rev, .after = "CAPEX")
+cNWC_p_of_Rev <- cNWC[1:9]/TotalRevenue[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, cNWC_p_of_Rev = cNWC_p_of_Rev, .after = "cNWC")
+pres_val_of_FCF <- c(rep(NA,4),round((FCF[5:9]/(1+WACC_data$T0_cal$RRR)^as.numeric(DiscountYear[5:9])/1000000)))
+pres_val_of_FCF <- data.frame(pres_val_of_FCF)
+DCF_data_CYE <- bind_cols(DCF_data_CYE,pres_val_of_FCF)
+
+detach(DCF_calc_data$calended_data)
+DCF_data_CYE <- DCF_data_CYE[3:9,]
+DCF_data_CYE$p_growth <- as.numeric(DCF_data_CYE$p_growth)
+
+DCF_data_CYE <- t(DCF_data_CYE)
+
+Year <- DCF_calc_data$calended_data$Year[3:4]
+Year <- c(Year, paste0(Year[2]+1, "E"), paste0(Year[2]+2, "E"), paste0(Year[2]+3, "E"), paste0(Year[2]+4, "E"), paste0(Year[2]+5, "E"))
+colnames(DCF_data_CYE) <- Year
+
+Year <- c("Revenue","growth y-o-y", "EBIT", "Operating margin", 
+                             "Taxes","% of EBIT", "D&A", "% of revenue", "CapEx",
+                             "% of revenue", "Change in NWC", "% of revenue",
+                             "EBIAT", "Free Cash Flow", "Present value of FCF" )
+
+DCF_data_CYE <- as_tibble(DCF_data_CYE)
+
+DCF_data_CYE <- DCF_data_CYE %>% add_column(Year, .before = "2021")
+
+DCF_data_CYE <- gt(DCF_data_CYE)
+
+DCF_data_CYE <- 
+  DCF_data_CYE %>%
+  tab_header(
+    title = glue("{Stock$list$Company} Discounted Cash Flow"),
+    subtitle = glue("{Stock$list$Currency} in millions")
+  ) %>%
+  fmt_percent(
+    columns = vars(`2021`,`2022`,`2023E`,`2024E`,`2025E`,`2026E`,`2027E`),
+    rows = c(2,4,6,8,10,12),
+    decimals = 1
+  ) %>%
+    fmt_currency(
+    columns = vars(`2021`,`2022`,`2023E`,`2024E`,`2025E`,`2026E`,`2027E`),
+    rows = c(1,3,5,7,9,11,13,14,15),
+    currency = "USD",
+    decimals = 0
+    )  
+
 
 
 ```

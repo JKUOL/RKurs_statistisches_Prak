@@ -5,7 +5,7 @@
 
 DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
   
-  # ticker <- "VZ"
+  # ticker <- "NKE"
   # TGR <- 0.025
   # timeframe <- 30
   
@@ -18,6 +18,7 @@ DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
   # assignes the URL of the ticker to a Variable and reads the HTML text  
   
   print("assingning urls and loading HTML")
+  
   url_fin <- paste0('https://finance.yahoo.com/quote/', 
                     ticker, '/financials?p=', ticker)
   html_fin <- read_html(url_fin) %>% html_node('body') %>% 
@@ -230,8 +231,24 @@ DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
   IntExpense <- rev(IntExpense)
   IntExpense <- IntExpense[1]
   IntExpense <- as.numeric(IntExpense)
+  
+  if (is.na(IntExpense) == TRUE) {
+    IntExpense <- qdapRegex::ex_between(html_fin, "NonOperatingInterestIncomeExpense", "annual")[[1]]
+    IntExpense <- IntExpense[3]
+    IntExpense <- qdapRegex::ex_between(IntExpense, "{\"raw\":", ",\"fmt\"")[[1]]
+    IntExpense <- as.numeric(IntExpense)
+    if (IntExpense < 0) {
+      IntExpense <- IntExpense*-1
+    }
+    
+  }
   IntExpense <- data.frame(IntExpense)
   T0Data <- bind_cols(T0Data,IntExpense)
+  
+  
+  
+  
+  
   
   # extracts outstanding shares
   

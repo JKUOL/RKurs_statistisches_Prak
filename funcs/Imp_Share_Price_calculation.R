@@ -4,13 +4,9 @@ Imp_Share_Price_calculation <- function() {
   calended_data <- DCF_calc_data$calended_data
   T0Data <- scraped_DCF_data[[1]]$T0Data
   
+  attach(T0_cal)
   attach(calended_data)
-  UnlevFCF <- c(rep("NA", 4), FCF[5]/(1+RRR)^as.numeric(DiscountYear[5]),
-               FCF[6]/(1+RRR)^as.numeric(DiscountYear[6]),
-               FCF[7]/(1+RRR)^as.numeric(DiscountYear[7]),
-               FCF[8]/(1+RRR)^as.numeric(DiscountYear[8]),
-               FCF[9]/(1+RRR)^as.numeric(DiscountYear[9])
-  )
+  UnlevFCF <- c(rep("NA", 4), FCF[5:9]/(1+RRR)^as.numeric(DiscountYear[5:9]))
   detach(calended_data)
   
   UnlevFCF <- data.frame(UnlevFCF)
@@ -21,6 +17,7 @@ Imp_Share_Price_calculation <- function() {
   
   PTermValue <- TermValue/(1+RRR)^as.numeric(calended_data$DiscountYear[9])
  
+  detach(T0_cal)
   
   EntpriVal <- sum(as.numeric(calended_data$UnlevFCF[5:9]))+PTermValue
   

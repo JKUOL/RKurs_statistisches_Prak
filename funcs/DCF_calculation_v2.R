@@ -14,8 +14,8 @@ DCF_calculation <- function(yearly_data = scraped_DCF_data[[1]]$yearly_data,
 # ProjRev <- ProjRev$ProjRev
 
   last_statement <- as.numeric(yearly_data$Year[4])
-  Year <- c(last_statement, last_statement+1, last_statement+2, last_statement+3,
-            last_statement+4, last_statement+5)
+  Year <- c(last_statement+1, last_statement+2, last_statement+3, last_statement+4,
+            last_statement+5, last_statement+6)
   Projection <- data.frame(Year)
   
   # calculates the Revenue growth rate and takes the mean for further 
@@ -149,7 +149,8 @@ DCF_calculation <- function(yearly_data = scraped_DCF_data[[1]]$yearly_data,
   calended_data <- bind_cols(calended_data, DiscountYear)
   
   out <- list(
-    calended_data = calended_data
+    calended_data = calended_data,
+    calc_df = calc_df
   )
   return(out)
 }
