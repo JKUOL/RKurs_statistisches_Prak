@@ -4,13 +4,13 @@ title: Search tool for possible undervalued Stocks with DCF and P/B and subseque
 author: "Justin König"
 date: "20.08.2022"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     code_folding: show
     theme: yeti
     toc: yes
     toc_float: yes
+  pdf_document:
+    toc: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -54,15 +54,17 @@ library(xml2)
 library(rvest)
 library(httr)
 library(dplyr)
+
 library(lubridate)
 library(quantmod)
 library(tidyquant)
 library(ggrepel)
 library(DiagrammeR)
-
-
+library(reshape2)
 library(gt)
 library(glue)
+library(gridExtra)
+
 
 
 ```
@@ -116,7 +118,7 @@ $$\sum_{i=1}^n X_i$$
       DCF_calc_data <- DCF_calculation()
       WACC_data <- WACC_calculation()
       ISP <- Imp_Share_Price_calculation()
-      ISP <- ISP$ISP_data
+      ISP <- ISP_data$ISP
       toassaign_df[paste(x),7] <- ISP
       print(paste("applying book value scraper to", company))
       toassaign_df[paste(x),8] <- bookv_data(ticker)
@@ -267,7 +269,7 @@ print(plot <- prices %>%
           
 ```
 
-```{r Stock chart comperisisson}
+```{r Cash Flow Table}
 
 ticker <- "NKE"
 Ticker <- data.frame(ticker)
@@ -284,8 +286,8 @@ attach(DCF_calc_data$calended_data)
 
 DCF_data_CYE <- data.frame(DCF_calc_data$calended_data[2:9])
 DCF_data_CYE <- round(DCF_data_CYE[1:8]/1000000)
-p_growth <- c("-", (TotalRevenue[2:9]/TotalRevenue[1:8]-1))
-DCF_data_CYE <- add_column(DCF_data_CYE, p_growth = p_growth, .after = "TotalRevenue")
+p_growth_Rev <- c("-", (TotalRevenue[2:9]/TotalRevenue[1:8]-1))
+DCF_data_CYE <- add_column(DCF_data_CYE, p_growth_Rev = p_growth_Rev, .after = "TotalRevenue")
 Operating_Margin <- EBIT[1:9]/TotalRevenue[1:9]
 DCF_data_CYE <- add_column(DCF_data_CYE, Operating_Margin = Operating_Margin, .after = "EBIT")
 p_of_EBIT <- IncTaxEx[1:9]/EBIT[1:9]
@@ -296,14 +298,16 @@ CapEx_p_of_Rev <- CAPEX[1:9]/TotalRevenue[1:9]
 DCF_data_CYE <- add_column(DCF_data_CYE, CapEx_p_of_Rev = CapEx_p_of_Rev, .after = "CAPEX")
 cNWC_p_of_Rev <- cNWC[1:9]/TotalRevenue[1:9]
 DCF_data_CYE <- add_column(DCF_data_CYE, cNWC_p_of_Rev = cNWC_p_of_Rev, .after = "cNWC")
+p_growth_FCF <- c("-", (FCF[2:9]/FCF[1:8]-1))
+DCF_data_CYE <- add_column(DCF_data_CYE, p_growth_FCF = p_growth_FCF, .after = "FCF")
 pres_val_of_FCF <- c(rep(NA,4),round((FCF[5:9]/(1+WACC_data$T0_cal$RRR)^as.numeric(DiscountYear[5:9])/1000000)))
 pres_val_of_FCF <- data.frame(pres_val_of_FCF)
 DCF_data_CYE <- bind_cols(DCF_data_CYE,pres_val_of_FCF)
 
 detach(DCF_calc_data$calended_data)
 DCF_data_CYE <- DCF_data_CYE[3:9,]
-DCF_data_CYE$p_growth <- as.numeric(DCF_data_CYE$p_growth)
-
+DCF_data_CYE$p_growth_Rev <- as.numeric(DCF_data_CYE$p_growth_Rev)
+DCF_data_CYE$p_growth_FCF <- as.numeric(DCF_data_CYE$p_growth_FCF)
 DCF_data_CYE <- t(DCF_data_CYE)
 
 Year <- DCF_calc_data$calended_data$Year[3:4]
@@ -313,32 +317,250 @@ colnames(DCF_data_CYE) <- Year
 Year <- c("Revenue","growth y-o-y", "EBIT", "Operating margin", 
                              "Taxes","% of EBIT", "D&A", "% of revenue", "CapEx",
                              "% of revenue", "Change in NWC", "% of revenue",
-                             "EBIAT", "Free Cash Flow", "Present value of FCF" )
+                             "EBIAT", "uFCF", "growth y-o-y",  "Present value of FCF" )
 
 DCF_data_CYE <- as_tibble(DCF_data_CYE)
 
 DCF_data_CYE <- DCF_data_CYE %>% add_column(Year, .before = "2021")
 
-DCF_data_CYE <- gt(DCF_data_CYE)
+DCF_table_CYE <- gt(DCF_data_CYE)
 
-DCF_data_CYE <- 
-  DCF_data_CYE %>%
+DCF_table_CYE <- 
+  DCF_table_CYE %>%
   tab_header(
     title = glue("{Stock$list$Company} Discounted Cash Flow"),
     subtitle = glue("{Stock$list$Currency} in millions")
   ) %>%
   fmt_percent(
-    columns = vars(`2021`,`2022`,`2023E`,`2024E`,`2025E`,`2026E`,`2027E`),
-    rows = c(2,4,6,8,10,12),
+    columns = c(2:8),
+    rows = c(2,4,6,8,10,12,15),
     decimals = 1
   ) %>%
     fmt_currency(
-    columns = vars(`2021`,`2022`,`2023E`,`2024E`,`2025E`,`2026E`,`2027E`),
-    rows = c(1,3,5,7,9,11,13,14,15),
+    columns = c(2:8),
+    rows = c(1,3,5,7,9,11,13,14,16),
     currency = "USD",
     decimals = 0
-    )  
+    ) %>% 
+  tab_style(
+    style = list(
+      cell_fill(color = "deepskyblue2")
+    ),
+    locations = cells_body(
+      columns = c(2:8),
+      rows = 14)
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "deepskyblue2")
+    ),
+    locations = cells_body(
+      columns = c(4:8), # not needed if coloring all columns
+      rows = 16)
+)
+
+
+DCF_table_CYE
+```
+
+```{r Price per Share Table}
+ISP_data <- Imp_Share_Price_calculation()
+
+attach(ISP_data)
+attach(scraped_DCF_data[[1]]$T0Data)
+attach(Stock$list)
+
+Discount <- 1-as.numeric(Price)/ISP
+
+Tot_PV_p_FCF <- sum(as.numeric(UnlevFCF))
+PPS_data <- bind_cols(Tot_PV_p_FCF,PTermValue,EntpriVal,EquValue,
+                      floatshares, ISP[1], Price, Discount )
+
+detach(ISP_data)
+detach(scraped_DCF_data[[1]]$T0Data)
+detach(Stock$list)
+PPS_data$...7 <- as.numeric(PPS_data[7])
+
+PPS_data[1:5] <- round(PPS_data[1:5]/1000000)
+PPS_data <- t(PPS_data)
+curYear <- format(Sys.Date())
+curYear <- year(curYear)
+
+colnames(PPS_data) <- curYear
+Year <- c("Total PV of proj. FCF", "PV Terminal VAlue", "Enterprise Value",
+          "Equity Value", "Shares outstanding", "Implied Share Price", 
+          "Current Share Price", "Discount")
+
+PPS_data <- as_tibble(PPS_data)
+PPS_data <- PPS_data %>% add_column(Year, .before = "2022")
+PPS_table <- gt(PPS_data)
+
+PPS_table <- 
+  PPS_table %>%
+  tab_header(
+    title = "Price per Share",
+    subtitle = glue("Numbers in millions, unless otherwise stated")
+  ) %>%
+  fmt_percent(
+    columns = `2022`,
+    rows = 8,
+    decimals = 1
+  ) %>%
+    fmt_currency(
+    columns = `2022`,
+    rows = c(1,2,3,4,6,7),
+    currency = "USD",
+    decimals = 0
+    )  %>%
+  tab_footnote(
+    footnote = "not in millions",
+    locations = cells_body(
+    columns = 1, 
+    rows = 6:8)
+  ) %>%
+tab_style(
+    style = list(
+      cell_fill(color = "deepskyblue2")
+    ),
+    locations = cells_body(
+      columns = c(2),
+      rows = 6)
+)
+rm(Year)
+PPS_table
+
+```
+
+```{r Revenue and EBIT Bar Graph}
+bar_graph_data <- bind_cols(DCF_calc_data$calended_data[1],
+                            round(DCF_calc_data$calended_data[2:3]/1000000))
+colnames(bar_graph_data) <- c("Year","Revenue","EBIT")
+
+
+
+mel_bar_data <- reshape2::melt(bar_graph_data, id.var = "Year")
+
+bar_graph_rev_EBIT  <- ggplot(mel_bar_data, aes(x=Year, y=value, fill = variable)) + 
+  geom_bar(stat = "identity", position = "dodge")+
+  theme_classic()+
+  theme(legend.position="top",
+        legend.title=element_blank())+
+  ylab("USD in Millions")+
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5)) +
+  scale_x_continuous("Year", labels = as.character(bar_graph_data$Year), breaks = bar_graph_data$Year)
+bar_graph_rev_EBIT <- bar_graph_rev_EBIT + ggtitle("Revenue and EBIT development")
+
+```
+
+```{r Nike, S$P500 and Competitors}
+
+ticker <- c("NKE", "^GSPC","ADDYY", "UA" )
+
+# counts 5 years into the past and sets it as start date for the plots
+  
+start_date <- ymd(format(Sys.Date())) - years(5)
+
+year1 <- start_date + years(1) + days(2)
+year2 <- start_date + years(2) + days(1)
+year3 <- start_date + years(3)
+year4 <- start_date + years(4) 
+lastdate <- ymd(format(Sys.Date())) - days(1)
+
+prices <- tq_get(ticker,
+                 from = start_date,
+                 to = format(Sys.Date()),
+                 get = "stock.prices")
+
+prices <- prices %>% 
+    rename(
+      ticker = symbol,
+    )
+
+
+
+return_rate_d <- prices[prices$date == start_date, ]
+return_rate_d <- bind_rows(return_rate_d, prices[prices$date == year1, ], 
+               prices[prices$date == year2, ], 
+               prices[prices$date == year3, ],
+               prices[prices$date == year4, ],
+               prices[prices$date == lastdate, ])
+
+return_rate_NKE <- return_rate_d[return_rate_d$ticker == "NKE", ]
+return_rate_NKE <- (return_rate_NKE$adjusted[2:6]-return_rate_NKE$adjusted[1:5])/return_rate_NKE$adjusted[1:5]
+avg_RR_NKE <- mean(return_rate_NKE)
+
+
+return_rate_SP500 <- return_rate_d[return_rate_d$ticker == "^GSPC", ]
+return_rate_SP500 <- (return_rate_SP500$adjusted[2:6]-return_rate_SP500$adjusted[1:5])/return_rate_SP500$adjusted[1:5]
+avg_RR_Sp500 <- mean(return_rate_SP500)
+
+return_rate_adi <- return_rate_d[return_rate_d$ticker == "ADDYY", ]
+return_rate_adi <- (return_rate_adi$adjusted[2:6]-return_rate_adi$adjusted[1:5])/return_rate_adi$adjusted[1:5]
+avg_RR_adi <- mean(return_rate_adi)
+
+return_rate_ua <- return_rate_d[return_rate_d$ticker == "UA", ]
+return_rate_ua <- (return_rate_ua$adjusted[2:6]-return_rate_ua$adjusted[1:5])/return_rate_ua$adjusted[1:5]
+avg_RR_ua <- mean(return_rate_ua)
+
+x <- 1000
+
+m_return_NKE <- c(x, x*return_rate_NKE[1]+x, (x*return_rate_NKE[1]+x)*return_rate_NKE[2]+(x*return_rate_NKE[1]+x))
+m_return_NKE <- c(m_return_NKE, m_return_NKE[3]*return_rate_NKE[3]+m_return_NKE[3])
+m_return_NKE <- c(m_return_NKE, m_return_NKE[4]*return_rate_NKE[4]+m_return_NKE[4])
+m_return_NKE <- c(m_return_NKE, m_return_NKE[5]*return_rate_NKE[5]+m_return_NKE[5])
+
+m_return_SP500 <- c(x, x*return_rate_SP500[1]+x, (x*return_rate_SP500[1]+x)*return_rate_SP500[2]+(x*return_rate_SP500[1]+x))
+m_return_SP500 <- c(m_return_SP500, m_return_SP500[3]*return_rate_SP500[3]+m_return_SP500[3])
+m_return_SP500 <- c(m_return_SP500, m_return_SP500[4]*return_rate_SP500[4]+m_return_SP500[4])
+m_return_SP500 <- c(m_return_SP500, m_return_SP500[5]*return_rate_SP500[5]+m_return_SP500[5])
+
+m_return_adi <- c(x, x*return_rate_adi[1]+x, (x*return_rate_adi[1]+x)*return_rate_adi[2]+(x*return_rate_adi[1]+x))
+m_return_adi <- c(m_return_adi, m_return_adi[3]*return_rate_adi[3]+m_return_adi[3])
+m_return_adi <- c(m_return_adi, m_return_adi[4]*return_rate_adi[4]+m_return_adi[4])
+m_return_adi <- c(m_return_adi, m_return_adi[5]*return_rate_adi[5]+m_return_adi[5])
+
+m_return_ua <- c(x, x*return_rate_ua[1]+x, (x*return_rate_ua[1]+x)*return_rate_ua[2]+(x*return_rate_ua[1]+x))
+m_return_ua <- c(m_return_ua, m_return_ua[3]*return_rate_ua[3]+m_return_ua[3])
+m_return_ua <- c(m_return_ua, m_return_ua[4]*return_rate_ua[4]+m_return_ua[4])
+m_return_ua <- c(m_return_ua, m_return_ua[5]*return_rate_ua[5]+m_return_ua[5])
+
+Years <- year(c(start_date,year1,year2,year3,year4,lastdate))
+
+return_df <- bind_cols(Years, m_return_NKE, m_return_SP500, m_return_adi, m_return_ua)
+
+return_df <- return_df %>% 
+    rename(
+      Year = ...1,
+      Nike = ...2,
+      SP500 = ...3,
+      Adidas = ...4,
+      UnderArmour = ...5
+    )
+
+mel_return_df <- reshape2::melt(return_df, id.var = "Year")
+mel_return_df$value <- round(mel_return_df$value)
+
+return_to_date <- return_df[return_df$Year == "2022", ]
+return_to_date <- t(round(return_to_date[2:5]-1000))
+colnames(return_to_date) <- "return in $"
+
+
+
+print(return_plot <- mel_return_df %>%
+          ggplot(aes(x = Year, y = value, color = variable)) +
+          geom_line()+
+          geom_point()+
+          theme_classic()+
+        theme(legend.position="top",
+        legend.title=element_blank())+
+          labs(x = 'Year',
+           y = "Return in USD",
+           title = "Return on investment of 1000$")+
+  annotation_custom(tableGrob(return_to_date), xmin=2017.1, xmax=2018, ymin=2000, ymax=3550)
+)
+
 
 
 
 ```
+

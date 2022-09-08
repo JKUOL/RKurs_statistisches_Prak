@@ -9,9 +9,7 @@ Imp_Share_Price_calculation <- function() {
   UnlevFCF <- c(rep("NA", 4), FCF[5:9]/(1+RRR)^as.numeric(DiscountYear[5:9]))
   detach(calended_data)
   
-  UnlevFCF <- data.frame(UnlevFCF)
-  calended_data <- bind_cols(calended_data, UnlevFCF)
-  
+
   TermValue <- calended_data$FCF[9]*(1+T0Data$TGR)/(RRR-T0Data$TGR)
   
   
@@ -19,7 +17,7 @@ Imp_Share_Price_calculation <- function() {
  
   detach(T0_cal)
   
-  EntpriVal <- sum(as.numeric(calended_data$UnlevFCF[5:9]))+PTermValue
+  EntpriVal <- sum(as.numeric(UnlevFCF[5:9]))+PTermValue
   
   if(isTRUE(T0Data$Debt<0)){
     Debt <-T0_cal$Debt
@@ -31,7 +29,11 @@ Imp_Share_Price_calculation <- function() {
   
   ISP_data<- round(EquValue/T0Data$floatshares)
   out <- list(
-    ISP_data = ISP_data
+    ISP = ISP_data,
+    EntpriVal = EntpriVal,
+    EquValue = EquValue,
+    PTermValue = PTermValue,
+    UnlevFCF = UnlevFCF[5:9]
   )
   return(out)
 }

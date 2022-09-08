@@ -11,9 +11,9 @@ DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
   
   # current Year and start Date for the exrtaction of the av. Return of S&P500
   
-  curYear<-format(Sys.Date())
-  curYear<-year(curYear)
-  start<-curYear-timeframe
+  curYear <- format(Sys.Date())
+  curYear <- year(curYear)
+  start <- curYear-timeframe
   
   # assignes the URL of the ticker to a Variable and reads the HTML text  
   
