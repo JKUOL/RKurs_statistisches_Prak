@@ -45,17 +45,24 @@ source("funcs/WACC_calculation.R")
 
 # loads packages
 
-library(ggplot2)
-library(data.table)
-library(tidyr)
 library(tidyverse)
+
+# library(ggplot2)
+library(tidyr)
+library(dplyr)
+# library(lubridate)
+
+library(data.table)
+
+library(broom)
+
 library(XML)
 library(xml2)
 library(rvest)
 library(httr)
-library(dplyr)
 
-library(lubridate)
+
+
 library(quantmod)
 library(tidyquant)
 library(ggrepel)
@@ -117,7 +124,7 @@ $$\sum_{i=1}^n X_i$$
       #required rate of return
       DCF_calc_data <- DCF_calculation()
       WACC_data <- WACC_calculation()
-      ISP <- Imp_Share_Price_calculation()
+      ISP_data <- Imp_Share_Price_calculation()
       ISP <- ISP_data$ISP
       toassaign_df[paste(x),7] <- ISP
       print(paste("applying book value scraper to", company))
@@ -450,6 +457,8 @@ bar_graph_rev_EBIT  <- ggplot(mel_bar_data, aes(x=Year, y=value, fill = variable
   scale_x_continuous("Year", labels = as.character(bar_graph_data$Year), breaks = bar_graph_data$Year)
 bar_graph_rev_EBIT <- bar_graph_rev_EBIT + ggtitle("Revenue and EBIT development")
 
+plot(bar_graph_rev_EBIT)
+
 ```
 
 ```{r Nike, S$P500 and Competitors}
@@ -476,8 +485,6 @@ prices <- prices %>%
       ticker = symbol,
     )
 
-
-
 return_rate_d <- prices[prices$date == start_date, ]
 return_rate_d <- bind_rows(return_rate_d, prices[prices$date == year1, ], 
                prices[prices$date == year2, ], 
@@ -487,20 +494,20 @@ return_rate_d <- bind_rows(return_rate_d, prices[prices$date == year1, ],
 
 return_rate_NKE <- return_rate_d[return_rate_d$ticker == "NKE", ]
 return_rate_NKE <- (return_rate_NKE$adjusted[2:6]-return_rate_NKE$adjusted[1:5])/return_rate_NKE$adjusted[1:5]
-avg_RR_NKE <- mean(return_rate_NKE)
+
 
 
 return_rate_SP500 <- return_rate_d[return_rate_d$ticker == "^GSPC", ]
 return_rate_SP500 <- (return_rate_SP500$adjusted[2:6]-return_rate_SP500$adjusted[1:5])/return_rate_SP500$adjusted[1:5]
-avg_RR_Sp500 <- mean(return_rate_SP500)
+
 
 return_rate_adi <- return_rate_d[return_rate_d$ticker == "ADDYY", ]
 return_rate_adi <- (return_rate_adi$adjusted[2:6]-return_rate_adi$adjusted[1:5])/return_rate_adi$adjusted[1:5]
-avg_RR_adi <- mean(return_rate_adi)
+
 
 return_rate_ua <- return_rate_d[return_rate_d$ticker == "UA", ]
 return_rate_ua <- (return_rate_ua$adjusted[2:6]-return_rate_ua$adjusted[1:5])/return_rate_ua$adjusted[1:5]
-avg_RR_ua <- mean(return_rate_ua)
+
 
 x <- 1000
 
@@ -524,9 +531,9 @@ m_return_ua <- c(m_return_ua, m_return_ua[3]*return_rate_ua[3]+m_return_ua[3])
 m_return_ua <- c(m_return_ua, m_return_ua[4]*return_rate_ua[4]+m_return_ua[4])
 m_return_ua <- c(m_return_ua, m_return_ua[5]*return_rate_ua[5]+m_return_ua[5])
 
-Years <- year(c(start_date,year1,year2,year3,year4,lastdate))
+Year <- year(c(start_date,year1,year2,year3,year4,lastdate))
 
-return_df <- bind_cols(Years, m_return_NKE, m_return_SP500, m_return_adi, m_return_ua)
+return_df <- bind_cols(Year, m_return_NKE, m_return_SP500, m_return_adi, m_return_ua)
 
 return_df <- return_df %>% 
     rename(
@@ -534,17 +541,24 @@ return_df <- return_df %>%
       Nike = ...2,
       SP500 = ...3,
       Adidas = ...4,
-      UnderArmour = ...5
+      UA = ...5
     )
 
 mel_return_df <- reshape2::melt(return_df, id.var = "Year")
 mel_return_df$value <- round(mel_return_df$value)
 
 return_to_date <- return_df[return_df$Year == "2022", ]
-return_to_date <- t(round(return_to_date[2:5]-1000))
-colnames(return_to_date) <- "return in $"
+return_to_date <- return_to_date[2:5]-1000
 
+avg_RR <- ((return_to_date[1:4]/1000*100)/5)
 
+return_to_date <- bind_rows(return_to_date,avg_RR)
+
+return_to_date <- t(round(return_to_date,2))
+
+colnames(return_to_date) <- c("return in $","Yearly avg. return [%]")
+
+tt2 <- ttheme_minimal()
 
 print(return_plot <- mel_return_df %>%
           ggplot(aes(x = Year, y = value, color = variable)) +
@@ -556,11 +570,55 @@ print(return_plot <- mel_return_df %>%
           labs(x = 'Year',
            y = "Return in USD",
            title = "Return on investment of 1000$")+
-  annotation_custom(tableGrob(return_to_date), xmin=2017.1, xmax=2018, ymin=2000, ymax=3550)
+  annotation_custom(tableGrob(return_to_date, theme = tt2), xmin=2018, xmax=2018.3, ymin=2000, ymax=3500)
 )
-
-
-
 
 ```
 
+```{r, Forecast}
+
+ticker <- "NKE"
+
+# counts 5 years into the past and sets it as start date for the plots
+  
+start_date <- ymd(format(Sys.Date())) - years(5)
+
+prices <- tq_get(ticker,
+                 from = start_date,
+                 to = format(Sys.Date()),
+                 get = "stock.prices")
+
+prices <- prices %>% 
+    rename(
+      ticker = symbol,
+    )
+
+mean_NKE_price <- round(mean(prices$adjusted),2)
+mean_NKE_price <- data.frame(mean_NKE_price)
+
+ticker_plot <- prices %>%
+          ggplot(aes(x = date, y = adjusted, color = ticker)) +
+          geom_line()+
+          geom_hline(data = mean_NKE_price, aes(yintercept = mean_NKE_price, color = ticker))+
+          
+          theme_classic()+
+        labs(x = 'Year',
+           y = "Stock Price in USD",
+           title = "Nike Stock Price past 5 Years")+
+        geom_text(data = mean_NKE_price, aes(x = prices$date[250], y = mean_NKE_price, label = paste("avg.", mean_NKE_price, Stock$list$Currency), vjust = -0.3), show.legend = F
+                  )
+
+Stock_info <- bind_cols(Stock$list[3],Stock$list[5],Stock$list[6],PPS_data$`2022`[6], PPS_data$`2022`[8]*100)
+rownames(Stock_info) <- ""
+
+Stock_info <- Stock_info %>% 
+    rename(
+      "Price [$]" = Price,
+      "ISP [$]" = ...4,
+      "Discount [%]" = ...5,
+    )
+
+t <- ticker_plot +
+  annotation_custom(tableGrob(Stock_info, theme = tt2), xmin=prices$date[400], xmax=prices$date[450], ymin=160, ymax=170)
+
+```
