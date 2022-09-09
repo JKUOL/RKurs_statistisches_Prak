@@ -42,27 +42,18 @@ source("funcs/WACC_calculation.R")
 ```
 
 ```{r packages, include = FALSE}
-
 # loads packages
-
 library(tidyverse)
-
 # library(ggplot2)
 library(tidyr)
 library(dplyr)
 # library(lubridate)
-
-library(data.table)
-
-library(broom)
-
-library(XML)
-library(xml2)
+# library(data.table)
+# library(broom)
+# library(XML)
+# library(xml2)
 library(rvest)
-library(httr)
-
-
-
+# library(httr)
 library(quantmod)
 library(tidyquant)
 library(ggrepel)
@@ -71,9 +62,6 @@ library(reshape2)
 library(gt)
 library(glue)
 library(gridExtra)
-
-
-
 ```
 
 ## Motivation
@@ -85,7 +73,9 @@ Das wird mein Dokument
 # the chosen tickers of the Stocks are assigned with a vector to the variable 
 # Ticker
 
-Ticker <-c("EOAN.DE", "GS", "MSFT", "AAPL", "BAC", "CRM", "NVDA", "NKE", "MS")
+# Ticker <-c("EOAN.DE", "GS", "MSFT", "AAPL", "BAC", "CRM", "NVDA", "NKE", "MS")
+
+Ticker <- "NKE"
 
 # creates a data frame out of the Tickers
 

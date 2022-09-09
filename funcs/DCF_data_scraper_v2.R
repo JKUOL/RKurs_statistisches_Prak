@@ -3,7 +3,7 @@
 # the needed Variables are the ticker the expected TGR of the global 
 # economy and the timeframe for the average Return of the S%P500 of the past
 
-DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
+DCF_data_scraper <- function(ticker, TGR = 0.025) {
   
   # ticker <- "NKE"
   # TGR <- 0.025
@@ -13,7 +13,7 @@ DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
   
   curYear <- format(Sys.Date())
   curYear <- year(curYear)
-  start <- curYear-timeframe
+  # start <- curYear-timeframe
   
   # assignes the URL of the ticker to a Variable and reads the HTML text  
   
@@ -41,10 +41,10 @@ DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
                     ticker,'/analysis?p=',ticker)
   html_ana <- read_html(url_ana) %>% html_node('body') %>% 
     html_text() %>% toString()
-  url_ret <- paste0('https://www.officialdata.org/us/stocks/s-p-500/',
-                    start,'?amount=100&endYear=',curYear)
-  html_ret <- read_html(url_ret) %>% html_node('body') %>% 
-    html_text() %>% toString()
+  # url_ret <- paste0('https://www.officialdata.org/us/stocks/s-p-500/',
+  #                   start,'?amount=100&endYear=',curYear)
+  # html_ret <- read_html(url_ret) %>% html_node('body') %>% 
+  #   html_text() %>% toString()
   
   url_risk_prem<-read_html('https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html')
   
@@ -245,10 +245,7 @@ DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
   IntExpense <- data.frame(IntExpense)
   T0Data <- bind_cols(T0Data,IntExpense)
   
-  
-  
-  
-  
+
   
   # extracts outstanding shares
   
@@ -271,34 +268,17 @@ DCF_data_scraper <- function(ticker, TGR = 0.025, timeframe = 30) {
   
   # extracts projected revenue and number of Analysts, number of Analysts 
   # can be used to determine the reliability of the forecast
+  
 
-  print(paste("extracting Average Return of S&P 500 over Timeframe of", timeframe, "years"))
   
-  # extracts the avr. rate of return for the S$P 500 in the given timeframe
-  
-  AvRet <- qdapRegex::ex_between(html_ret, ", or", "% per year")[[1]]
-  AvRet <- AvRet[1]
-  AvRet <- as.numeric(AvRet)/100
-  AvRet <- data.frame(AvRet)
-  T0Data <- bind_cols(T0Data,AvRet)
-  
-  T0Data<-data.frame(T0Data,TGR)
-  
-  # extracts Net Debt 
-  
-  NetBorr <- qdapRegex::ex_between(html_cf, "annualNetIssuancePaymentsOfDebt", "trailing")[[1]]
-  NetBorr <- qdapRegex::ex_between(NetBorr, "{\"raw\":", ",\"fmt\"")[[1]]
-  NetBorr <- NetBorr[1:4]
-  NetBorr <- as.numeric(NetBorr)
-  NetBorr <- data.frame(NetBorr)
-  yearly_data <- bind_cols(yearly_data, NetBorr)
-  
-  cash <- NetBorr <- qdapRegex::ex_between(html_balance, "otherAssets", "total")[[1]]
-  cash <- NetBorr <- qdapRegex::ex_between(html_balance, "\"cash\":{\"raw\":", ",\"fmt\":")[[1]]
+  cash <- qdapRegex::ex_between(html_balance, "otherAssets", "total")[[1]]
+  cash <- qdapRegex::ex_between(html_balance, "\"cash\":{\"raw\":", ",\"fmt\":")[[1]]
   cash <- cash[1]
   cash <- as.numeric(cash)
   cash <- data.frame(cash)
   T0Data <- bind_cols(T0Data, cash)
+  
+  T0Data<-data.frame(T0Data,TGR)
   
   out <- list(
     yearly_data = yearly_data,
