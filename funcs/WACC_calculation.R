@@ -41,7 +41,7 @@
   WACC <- data.frame(WACC)
   T0_cal <- bind_cols(T0_cal, WACC)
   
-  if(isTRUE(T0_cal$WACC>0.05)){
+  if(isTRUE(T0_cal$WACC>0.07)){
     RRR <- T0_cal$WACC
   } else {
     RRR <- 0.075

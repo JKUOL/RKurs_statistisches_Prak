@@ -1,17 +1,20 @@
 ---
-title: Search tool for possible undervalued Stocks with DCF and P/B and subsequent
-  Stock evaluation
+title: "Suche nach potentiell unterbewerteten Aktien mittels DCF und P/B Value"
 author: "Justin König"
-date: "20.08.2022"
+date: "12.09.2022"
 output:
-  pdf_document:
-    toc: yes
   html_document:
     code_folding: show
-    theme: yeti 
+    theme: yeti
     toc: yes
     toc_float: yes
----
+  pdf_document:
+    toc: yes
+editor_options:
+  markdown:
+    wrap: 72
+bibliography: citations.bib
+link-citations: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -19,6 +22,7 @@ output:
 # fall ein include = FALSE, wwas dazu führt, dass dieser chunk nicht im 
 # html Dokument vorkommt
 
+ 
 # ermöglich das ändern der voreinstellungen der chunk optionen
 # der source code wird im output dargestellt, warnings nicht
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
@@ -34,17 +38,193 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```{r packages, include = FALSE}
 # läd packages
 library(tidyverse)
-library(tidyr)
-library(dplyr)
 library(rvest)
 library(quantmod)
 library(tidyquant)
-library(ggrepel)
 library(DiagrammeR)
 library(reshape2)
 library(gt)
 library(glue)
 library(gridExtra)
+```
+
+## Motivation
+
+```{=html}
+<style>
+body {
+text-align: justify}
+</style>
+```
+Durch Corona und den darauffolgenden Crash an den Börsen, sowie der boom
+der Neobroker kam es in den letzten Jahren zu einer stark steigenden
+Zahl von Kleinanlegern an den Aktienmärkten.[@boomkleinanleger] Das Ziel
+dieser Arbeit besteht darin, ein möglichst einfach zu bedienendes Tool
+zu kreieren, welches mit dem Grundgedanken des Value Investing, den
+intrinisischen Wert mittels Discounted Free Cash Flow berechnet. Dieser
+Implizierte Aktienpreis, soll der Auswahl von Unternehmen dienen, welche
+im Anschluss genauer betrachtet werden können.
+
+## Einleitung
+
+Im Finanzwesen spielt das Bewerten von Unternehmen mit Hilfe von
+DCF-Modellen eine wichtige Rolle. Bei dem intrinsic value handelt es
+sich um den aktuellen wahren Wert eines Unternehmens unter
+Berücksichtigung zukünftiger erwarteter
+Geschäftzahlen[@lee_myers_swaminathan_1999]
+
+Die ermittlung eines intrinisischen Wertes mittels DCF-Models, kann
+hierbei auf zwei Arten geschehen, zum einen mit dem sogegannten free
+cash flow to equity oder auch levered free cash flow und dem in dieser
+Arbeit genutzen unlevered free cash flow (uFCF). Beim uFCF wird wie der
+Name sagt kein Hebel mit einbezogen (Hebel steht hierbei für Schulden).
+Aus diesem uFCF kann im Anschluss der aktuelle impliezierte Aktienpreis
+des Unternehmens berechnet werden.
+
+## Unlevered Free Cash Flow Berechnung
+
+Um den uFCF zu berechnen, müssen zunächst einige Unternehmenszahlen
+projeziert werden. Zunächst wird der mittelwert des Wachstums aus den
+vergangen Revenuezahlen und den Zahlen der Analysten für die kommenden
+zwei Jahre gebildet. Mit Hilfe dieses Mittelwertes werden der Revenue
+weiter projeziert. Anhand des Revenues kann nun bezug auf die
+zukünftigen EBIT (earnings before interest and taxes), D&A (Depreciation
+& amortization), CapEx (capital expenditure) und cNWC (change in net
+working capital) genommen werden. Hierbei berechnet sich der uFCFwie
+folgt.[@firmvaluation]
+
+$uFCF = EBIT*(1-taxrate)+DA-CapEx-cNWC$
+
+Für die weitere Berechnung des implied share price wird die sogeannte
+required rate of return benötigt (RRR), diese kann angenommen werden, da
+sie den return welcher ein Asset hervorbringen soll, darstellt. Jedoch
+kann diese mittels dem weigthed average cost of capital (WACC) auch
+berechnet werden.[@WACC]
+
+$WACC = r_e*(1-L)+r_d*(1-T_c)*L$ mit $r_e$: cost of equity L: leverage
+ratio (Debt/Value) $r_d$: cost of debt, $T_c$: tax rate
+
+Aus dem uFCF und der RRR kann nur der Firm Value berechnet
+werden.[@firmvaluation]
+
+$FirmValue = \sum_{t=1}^t \frac {uFCF_t}{(1+RRR)^t}$ mit $FCFF_t$ = Free
+Cash Flow in year t
+
+Es gilt zu beachten, das in dieser Arbeit eine mid Year conversion
+angewandt wird, wodurch t in Jahren mit dem Discount Factor ersetzt
+wird. Dies entspringt der Annahme, das ein unternehmen konstant Cash
+Flow generiert und somit der Fortschritt des Fiscal Jahres
+berücksichtigt werden muss.
+
+$Terminalvalue = uFCF * \frac{1+TGR}{RRR-TGR}$
+
+$pTerminalValue = \frac {{Terminalvalue_n}}{(1+RRR)^discfac}$
+
+Der Enterprise Value ergibt sich daraufhin aus folgenden Formel.[@entval]
+
+$Enterprisevalue = pTerminalvalue+Firmvalue$
+
+Addiertt man nun noch das Cash Vermögen des Unternehmens und zieht die
+Schulden ab gelant man zum Equity Value
+
+$Equityvalue = Enterprisevalue + Cash +Schulden$
+
+Teilt man dieses durch die Aktien im Umlauf erhält man den implizierten Aktienpreis.
+
+Hierraus stellt sich die Frage, nach der Möglichkeit einen Data Scraper zu
+konstruieren, welcher kostenfreie Daten nutzt, um mit diesem die nötigen
+Informationen zu sammeln, welche für die uFCF und anschließend implied
+share price kalkulation gebraucht werden.
+
+## Aufbau
+
+Zunächst wird durch die Data Scraper die Daten für die DCF und den Price
+to Book value (P/B) von den zugeteilten Websiten gescraped. Die Ticker
+der angegebenen Unternehmen dienen als Pfad für das extrahieren der HTML
+Texte aus den URLs. Diese HTML Texte werden im Anschluss nach
+Stichwörtern durchsucht und die Zwischenstellen extrahiert. Diese
+Zwischenstellen dienen in Form von data frames als Grundlage für die
+Berechnung des Intrinsic Values bzw. bei Banken der Berechnung des
+P/B-Values.
+
+## Daten
+
+Alle Daten mit der Ausnahme des country risk premiums stammen von Yahoo
+Finance. Das Country Risk Premium wird der Webiste von Professor Aswath
+Damodaran mit Hilfe eines HTML nodes in Form einer Tabelle entnommen,
+und als data frame dargestellt. Für das country risk premium nutzt
+Professor Aswath das implied equity risk premium des Aktieindexes
+S&P500.[@countryriskpremium] Die Daten von Yahoo Finances werden mit
+Hilfe des packages rvest in Form des gesamten bodys als Text ausgegeben.
+In diesem Text sind die benötigten Zahlen und Daten wie Währung oder
+Industry enhalten. Diese werden mit qdapRegex extrahiert und in Form von
+data frames bis zur Berechnung gespeichert. Diese Daten werden von Yahoo
+Finance erhoben und stammen aus den Berichten der Unternehmen, sind
+jedoch leider in manchen Fällen unvollständig oder unterschiedlich
+gelabelt.
+
+Pro Unternehmen werden zwei Listen mit je fünf bzw. drei data frames und
+einem einzelnen data frame ausgegeben. In Summe sind hierin 46
+Datenpunkte enthalten. Die Umfänge der gesamten Daten unterscheiden sich
+je nach dem wieviele Unternehmen untersucht werden sollen.
+
+## Software
+
+Das Programm wurde in RStudio mit der R-Version: 4.1.1 auf einem Laptop
+(Lenovo ThinkPad T490s) angefertig. Folgende packages wurden verwendet.
+
+-   tidyverse
+
+    -   ggplot2
+
+    -   dplyr
+
+    -   tibble
+
+-   rvest
+
+-   quantmod
+
+-   tidyquant
+
+-   GridExtra
+
+-   DiagrammeR
+
+-   gt
+
+-   glue
+
+Bei tidyverse handelt es sich um ein package in welchem mehrere packages
+enthalten sind. Hierrunter fallen ggplot2 (dient der visualisierung),
+dplyr (manipulation von data frames) , tidyr (umwandlung von data
+frames), readr(lesen von data aus z. B. CSVs), purrr(erleichtert
+Arbeiten mit Vektoren und Funktionen), tibble(ermöglicht data frame
+anderst zu formatieren), stringr(erleichtert das Arbeiten mit strings)
+und forcats(hilft bei der Kategorisierung von variablen). Es wurden
+jedoch nicht alle packeges die in tidyverse enthalten sind in dieser
+Arbeit verwendet. Dei den verwendeten handelt es sich um ggplot2, dplyr
+und tibble. Zur Umwandlung des Formats von data frames wurde das package
+reshape2 genutzt.
+
+Als Kernstück der Scraper dient das package rvest, dieses ermöglicht das
+Sammeln von Daten von Websiten. Zur Sammlung von aktuellen Aktienkursen
+wird das quantmod genutzt, während tidyquant die verbindunge zwischen
+quantmod und den tidyverse packages schafft.
+
+GridExtra ermöglicht ein schönes einfügen von Tabellen in Plots welche
+mit ggplot2 angefertigt wurden. Mit DiagrammeR lassen sich Flow Charts
+erstellen und mit dem package gt ergeben sich Möglichkeiten schöne
+Tabellen zu erstellen. Mit glue können Variablen eingefügt und auch
+Verbunden werden, ähnlich wie mit der paste Funktion, jedoch kürzer und
+übersichtlicher bei mehreren Variablen.
+
+```{r Ausgewählte Unternehmen function}
+# Die Ticker der ausgesuchten Firmen, werden mittels eines Vektors der 
+# Variablen Ticker zugewiesen
+
+Ticker <-c("EOAN.DE", "GS", "MSFT", "AAPL", "BAC", "CRM", "NVDA", "NKE", "MS")
+# Ticker <- "NKE"
 ```
 
 ```{r basic data scraper function}
@@ -60,12 +240,12 @@ basics_data <- function(ticker) {
   # die 0 an paste bewirkt das weglassen von leerzeichen
   url_profile <- paste0('https://finance.yahoo.com/quote/', ticker)
   
-  # weißt der Variablen den HTML Text der URL zu
+  # weist der Variablen den HTML Text der URL zu
   # hier werden der HTML Text des Profils der Firma hinzugefügt
   html_profile <- read_html(url_profile) %>% html_node('body') %>% 
     html_text() %>% 
     toString()
-  
+
   # extrahiert den HTML Text der financials Seite von Yahoo Finance der Firma
   url_fin <- paste0('https://finance.yahoo.com/quote/', 
                     ticker, '/financials?p=', ticker)
@@ -78,22 +258,26 @@ basics_data <- function(ticker) {
   # wird, müssen diese im FOlgenden immer in numerische charactere umgewandelt 
   # werden.
   # Im Anschluss wird die Zahl auf zwei Nachkommastellen gerundet
-  Price <- qdapRegex::ex_between(html_profile, "currentPrice\":{\"raw\":", ",\"fmt\":\"")[[1]]
+  Price <- qdapRegex::ex_between(html_profile, "currentPrice\":{\"raw\":",
+                                 ",\"fmt\":\"")[[1]]
   Price <- as.numeric(Price)
   Price <- round(Price, 2)
   
   # Extrahiert den Subsektor der Firma, da mehrere Textpassagen extrahiert werden
   # wird nur der erste genutzt (die gewollte Industry)
-  Industry <- qdapRegex::ex_between(html_profile, "industry\":\"", "\"")[[1]]
+  Industry <- qdapRegex::ex_between(html_profile, "industry\":\"",
+                                    "\"")[[1]]
   Industry <- Industry[1]
   
   # extrahiert die Währung
-  Currency <- qdapRegex::ex_between(html_fin, "financialCurrency\":\"", "\"},\"price")[[1]]
+  Currency <- qdapRegex::ex_between(html_fin, "financialCurrency\":\"",
+                                    "\"},\"price")[[1]]
   Currency <- data.frame(Currency)
   
   # extrahiert den EPS   
 
-  EPS <- qdapRegex::ex_between(html_profile, "EPS (TTM)", "Earnings")[[1]]
+  EPS <- qdapRegex::ex_between(html_profile, "EPS (TTM)",
+                               "Earnings")[[1]]
   EPS <- EPS[1]
   EPS <- as.numeric(EPS)
   
@@ -103,10 +287,11 @@ basics_data <- function(ticker) {
   
   # extrahiert den Firmennamen
   
-  Company <- qdapRegex::ex_between(html_profile, "\":{\"title\":\"", " (")[[1]]
+  Company <- qdapRegex::ex_between(html_profile, "\":{\"title\":\"",
+                                   " (")[[1]]
   Company <- Company[1]
  
-  # weißt einer Liste die Variablen Price, Industry, PE, and Company zu und
+  # weist einer Liste die Variablen Price, Industry, PE, and Company zu und
   # gibt diese aus
   
   out <- list (
@@ -121,7 +306,7 @@ basics_data <- function(ticker) {
 ```
 
 ```{r Basics_assignment Funktion}
-# eine while Schleife, nimmt den Ticker und weißt diesem die korrekte Industry,
+# eine while Schleife, nimmt den Ticker und weist diesem die korrekte Industry,
 # den Preis und P/E, sowie den Firmennamen zu 
 # in Klammern steht toassaign_df, da bei nutzen der Funktion, dieser zugewiesen
 # werden kann
@@ -166,13 +351,17 @@ basics_assignement <- function(toassaign_df) {
     # Zudem werden Statments gedruckt, welche den Nutzer wissen lässt, 
     # an welcher Stelle die zuweisung aktuell ist
     toassaign_df[paste(x),1] <- Company
-    print(paste("assining Industry", x, "of",nrow(toassaign_df), "to", Company))
+    print(paste("assining Industry", x, "of",nrow(toassaign_df), "to",
+                Company))
     toassaign_df[paste(x),3] <- Industry
-    print(paste("assining Currency", x, "of",nrow(toassaign_df), "to", Company))
+    print(paste("assining Currency", x, "of",nrow(toassaign_df), "to",
+                Company))
     toassaign_df[paste(x),4] <- Currency
-    print(paste("assining Price", x, "of",nrow(toassaign_df), "to", Company))
+    print(paste("assining Price", x, "of",nrow(toassaign_df), "to",
+                Company))
     toassaign_df[paste(x),5] <- Price
-    print(paste("calculating and assining P/E", x, "of",nrow(toassaign_df), "to", Company))
+    print(paste("calculating and assining P/E", x, "of",nrow(toassaign_df),
+                "to", Company))
     toassaign_df[paste(x),6] <- round(PE,2)
     
     # addiert x + 1 damit die nächste Reihe bearbeitet wird
@@ -192,11 +381,6 @@ basics_assignement <- function(toassaign_df) {
 # Die ergebnisse dieses chunks werden nicht in dem HTML Dokument ausgegeben,
 # da bei vielen Tickern ein großer output entsteht
 
-# Die Ticker der ausgesuchten Firmen, werden mittels eines Vektors der 
-# Variablen Ticker zugewiesen
-
-Ticker <-c("EOAN.DE", "GS", "MSFT", "AAPL", "BAC", "CRM", "NVDA", "NKE", "MS")
-
 # Erstellt einen data frame aus Ticker
 Stocks <- data.frame(Ticker)
 
@@ -208,6 +392,8 @@ rm(Ticker)
 # und nutzt anschliesend nut den Teil der Listen, welche benötigt wird
 Stocks <- basics_assignement(Stocks)
 Stocks <- Stocks$list
+
+print(Stocks)
 ```
 
 ```{r DCF Scraper}
@@ -232,7 +418,8 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
     html_text() %>% toString()
   url_cf <- paste0('https://finance.yahoo.com/quote/',
                    ticker, '/cash-flow?p=', ticker)
-  html_cf <- read_html(url_cf) %>% html_node('body') %>% html_text() %>% toString()
+  html_cf <- read_html(url_cf) %>% html_node('body') %>% html_text() %>% 
+    toString()
   url_bonds <- 'https://finance.yahoo.com/bonds'
   html_bonds <- read_html(url_bonds) %>% 
     html_node('body') %>%  html_text() %>% toString()
@@ -249,8 +436,9 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   html_ana <- read_html(url_ana) %>% html_node('body') %>% 
     html_text() %>% toString()
   
-  # URL für das equity risk premium
-  url_risk_prem<-read_html('https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html')
+  # ließt HTML Text der URL für das equity risk premium
+  url_risk_prem<-read_html(
+    'https://pages.stern.nyu.edu/~adamodar/New_Home_Page/datafile/ctryprem.html')
   
   # da es bei diesem HTML Text Probleme mit qdapRegex gibt wird das 
   # equity risk premiummit filfe eines HTML Nodes extrahiert, welcher die
@@ -260,14 +448,17 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   
   # extrahiert die Jahre in welcher die Finacel Statments herrausgegeben wurden
   # und erstellt einen data frame daraus
-  Year <- qdapRegex::ex_between(html_fin, "financialsChart\":{\"yearly\":", "quarterly\":[{\"")[[1]]
-  Year <- qdapRegex::ex_between(Year, "{\"date\":", ",\"revenue\"")[[1]]
+  Year <- qdapRegex::ex_between(html_fin, "financialsChart\":{\"yearly\":", 
+                                "quarterly\":[{\"")[[1]]
+  Year <- qdapRegex::ex_between(Year, "{\"date\":",
+                                ",\"revenue\"")[[1]]
   yearly_data <- data.frame(Year)
   
   # extrahiert den Revenue 
   print("extracting Revenue")
   
-  TotalRevenue <- qdapRegex::ex_between(html_fin, ",\"revenue\":{\"raw\":", ",\"fmt\":\"")[[1]]
+  TotalRevenue <- qdapRegex::ex_between(html_fin, ",\"revenue\":{\"raw\":",
+                                        ",\"fmt\":\"")[[1]]
   TotalRevenue <- TotalRevenue[1:4]
   TotalRevenue <- as.numeric(TotalRevenue)
   TotalRevenue <- data.frame(TotalRevenue)
@@ -278,17 +469,23 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # extrahiert den avg. prohected revenue für die kommenden 2 Jahre und die 
   # Anzahl der Analysten, welche diese Vorhersage getroffen haben
   
-  ProjRev <- qdapRegex::ex_between(html_ana, "revenueEstimate", "numberOfAnalysts")[[1]]
+  ProjRev <- qdapRegex::ex_between(html_ana, "revenueEstimate",
+                                   "numberOfAnalysts")[[1]]
   ProjRev <- ProjRev[3:4]
-  ProjRev <- c(qdapRegex::ex_between(ProjRev, "\"avg\":{\"raw\":", ",\"fmt")[[1]],
-               qdapRegex::ex_between(ProjRev, "\"avg\":{\"raw\":", ",\"fmt")[[2]] )
+  ProjRev <- c(qdapRegex::ex_between(ProjRev, "\"avg\":{\"raw\":",
+                                     ",\"fmt")[[1]],
+               qdapRegex::ex_between(ProjRev, "\"avg\":{\"raw\":",
+                                     ",\"fmt")[[2]] )
   ProjRev <- as.numeric(ProjRev)
   ProjRev <- data.frame(ProjRev)
   
-  ProjAnalysts <- qdapRegex::ex_between(html_ana, "revenueEstimate", "yearAgoRevenue")[[1]]
+  ProjAnalysts <- qdapRegex::ex_between(html_ana, "revenueEstimate",
+                                        "yearAgoRevenue")[[1]]
   ProjAnalysts <- ProjAnalysts[3:4]
-  ProjAnalysts <- c(qdapRegex::ex_between(ProjAnalysts, "\"numberOfAnalysts\":{\"raw\":", ",\"fmt")[[1]],
-                    qdapRegex::ex_between(ProjAnalysts, "\"numberOfAnalysts\":{\"raw\":", ",\"fmt")[[2]] )
+  ProjAnalysts <- c(qdapRegex::ex_between(ProjAnalysts,
+                   "\"numberOfAnalysts\":{\"raw\":", ",\"fmt")[[1]],
+                    qdapRegex::ex_between(ProjAnalysts, 
+                   "\"numberOfAnalysts\":{\"raw\":", ",\"fmt")[[2]])
   ProjAnalysts <- as.numeric(ProjAnalysts)
   ProjAnalysts <- data.frame(ProjAnalysts)
   ProjRev <- bind_cols(ProjRev,ProjAnalysts)
@@ -296,8 +493,10 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # Extrahiert den EBIT
   print("extracting EBIT")
   
-  EBIT <- qdapRegex::ex_between(html_fin, "annualOperatingIncome", "annual")[[1]]
-  EBIT <- qdapRegex::ex_between(EBIT, "{\"raw\":", ",\"fmt\"")[[1]]
+  EBIT <- qdapRegex::ex_between(html_fin, "annualOperatingIncome",
+                                "annual")[[1]]
+  EBIT <- qdapRegex::ex_between(EBIT, "{\"raw\":",
+                                ",\"fmt\"")[[1]]
   EBIT <- as.numeric(EBIT[1:4])
   EBIT <- data.frame(EBIT)
   yearly_data <- bind_cols(yearly_data, EBIT)
@@ -305,7 +504,8 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # Extrahier den Income Tax Expense
   print("extracting income tax expense")
   
-  IncTaxEx <- qdapRegex::ex_between(html_balance, "\"incomeTaxExpense\":{\"raw\":", ",\"fmt\":")[[1]]
+  IncTaxEx <- qdapRegex::ex_between(html_balance,
+              "\"incomeTaxExpense\":{\"raw\":", ",\"fmt\":")[[1]]
   IncTaxEx <- rev(IncTaxEx[5:8])
   IncTaxEx <- as.numeric(IncTaxEx)
   IncTaxEx <- data.frame(IncTaxEx)
@@ -314,8 +514,10 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # extrahiert Depreciation & Amortization (D&A)
   print("extracting Depreciation & Amortization")
   
-  DandA <- qdapRegex::ex_between(html_fin, "annualReconciledDepreciation", "trailing")[[1]]
-  DandA <- qdapRegex::ex_between(DandA, "\"raw\":", ",\"fmt\":")[[1]]
+  DandA <- qdapRegex::ex_between(html_fin, "annualReconciledDepreciation",
+                                 "trailing")[[1]]
+  DandA <- qdapRegex::ex_between(DandA, "\"raw\":",
+                                 ",\"fmt\":")[[1]]
   DandA <- DandA[1:4]
   DandA <- as.numeric(DandA)
   DandA <- data.frame(DandA)
@@ -324,7 +526,8 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   print("extracting Capital Expenditure")
   
   # extrahiert CAPEX (Capital Expenditure) 
-  CAPEX <- qdapRegex::ex_between(html_cf, "\"capitalExpenditures\":", "\"fmt\"")[[1]]
+  CAPEX <- qdapRegex::ex_between(html_cf, "\"capitalExpenditures\":",
+                                 "\"fmt\"")[[1]]
   CAPEX <- CAPEX[1:4]
   CAPEX <- gsub("{\"raw\":", "", CAPEX, fixed=T)
   CAPEX <- gsub(",", "", CAPEX, fixed=T)
@@ -335,7 +538,8 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   yearly_data <- bind_cols(yearly_data, CAPEX)
   
   # extrahiert NWC () Changein net working capital)
-  cNWC <- qdapRegex::ex_between(html_cf, "annualChangeInWorkingCapital", "trailing")[[1]]
+  cNWC <- qdapRegex::ex_between(html_cf, "annualChangeInWorkingCapital",
+                                "trailing")[[1]]
   cNWC <- qdapRegex::ex_between(cNWC, "\"raw\":", ",\"fmt\":")[[1]]
   cNWC <-  cNWC[1:4]
   cNWC <- as.numeric(cNWC)
@@ -344,7 +548,8 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
  
   # extrahiert das ende des Fiskaljahres des Unternehmens und berechnet den 
   # aktuellen Prozensatz für die später folgende calenderization
-  fye <- qdapRegex::ex_between(html_stats, "lastFiscalYearEnd", "heldPercentInstitutions")[[1]]
+  fye <- qdapRegex::ex_between(html_stats, "lastFiscalYearEnd",
+                               "heldPercentInstitutions")[[1]]
   fyemonth <- qdapRegex::ex_between(fye, "-", "-")[[1]]
   fyemonth <- as.numeric(fyemonth)
   rateofffye <- fyemonth/12
@@ -355,7 +560,8 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # extrahiert das Market Cap
   print("extracting Market Cap")
   
-  MarkCap <- qdapRegex::ex_between(html_stats, "trailingMarketCap", "\"fmt\":\"")[[1]]
+  MarkCap <- qdapRegex::ex_between(html_stats, "trailingMarketCap",
+                                   "\"fmt\":\"")[[1]]
   MarkCap <- qdapRegex::ex_between(MarkCap, "\"raw\":", ",")[[1]]
   MarkCap <- as.numeric(MarkCap)
   MarkCap <- data.frame(MarkCap)
@@ -390,7 +596,8 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # extrahiert current Debt
   print("extracting current Debt")
   
-  CurrDebt <- qdapRegex::ex_between(html_balance, "CurrentDebtAndCapitalLeaseObligation", "annual")[[1]]
+  CurrDebt <- qdapRegex::ex_between(html_balance,
+              "CurrentDebtAndCapitalLeaseObligation", "annual")[[1]]
   CurrDebt <- CurrDebt[2]
   CurrDebt <- qdapRegex::ex_between(CurrDebt, "\"raw\":", ",\"fmt\":\"")[[1]]
   CurrDebt <- rev(CurrDebt)
@@ -402,8 +609,10 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # extrahiert die long term Debt
   print("extracting long term Debt")
   
-  LongDebt <- qdapRegex::ex_between(html_balance, "longTermDebt\"", "inventory")[[1]]
-  LongDebt <- qdapRegex::ex_between(LongDebt, "\"raw\":", ",\"fmt\":\"")[[1]]
+  LongDebt <- qdapRegex::ex_between(html_balance, "longTermDebt\"",
+                                    "inventory")[[1]]
+  LongDebt <- qdapRegex::ex_between(LongDebt, "\"raw\":",
+                                    ",\"fmt\":\"")[[1]]
   LongDebt <- LongDebt[1]
   LongDebt <- as.numeric(LongDebt)
   LongDebt <- data.frame(LongDebt)
@@ -419,16 +628,20 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # ist, wird eine if Schleife genutzt.
   # Diese extrahiert von einer anderen Stelle, falls der Wert der ersten
   # extraktion NA ist
-  IntExpense <- qdapRegex::ex_between(html_fin, "annualInterestExpense", "annual")[[1]]
-  IntExpense <- qdapRegex::ex_between(IntExpense, "{\"raw\":", ",\"fmt\"")[[1]]
+  IntExpense <- qdapRegex::ex_between(html_fin, "annualInterestExpense",
+                                      "annual")[[1]]
+  IntExpense <- qdapRegex::ex_between(IntExpense, "{\"raw\":",
+                                      ",\"fmt\"")[[1]]
   IntExpense <- rev(IntExpense)
   IntExpense <- IntExpense[1]
   IntExpense <- as.numeric(IntExpense)
   
   if (is.na(IntExpense) == TRUE) {
-    IntExpense <- qdapRegex::ex_between(html_fin, "NonOperatingInterestIncomeExpense", "annual")[[1]]
+    IntExpense <- qdapRegex::ex_between(html_fin,
+                    "NonOperatingInterestIncomeExpense", "annual")[[1]]
     IntExpense <- IntExpense[3]
-    IntExpense <- qdapRegex::ex_between(IntExpense, "{\"raw\":", ",\"fmt\"")[[1]]
+    IntExpense <- qdapRegex::ex_between(IntExpense, "{\"raw\":",
+                                        ",\"fmt\"")[[1]]
     IntExpense <- as.numeric(IntExpense)
     if (IntExpense < 0) {
       IntExpense <- IntExpense*-1
@@ -441,7 +654,8 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # extrahiert die ausstehenden Aktien
   print("extracting Outstanding Shares")
   
-  floatshares <- qdapRegex::ex_between(html_stats, "\"floatShares\":{\"raw\":", ",\"fmt\"")[[1]]
+  floatshares <- qdapRegex::ex_between(html_stats, "\"floatShares\":{\"raw\":",
+                                       ",\"fmt\"")[[1]]
   floatshares <- as.numeric(floatshares)
   floatshares <- data.frame(floatshares)
   T0Data <- bind_cols(T0Data,floatshares)
@@ -449,21 +663,24 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
   # extrahiert die Steuern vor Einkommen 
   print("extracting pre income tax")
   
-  PreIncTax <- qdapRegex::ex_between(html_fin, "incomeBeforeTax\":{\"raw\":", ",\"fmt\"")[[1]]
+  PreIncTax <- qdapRegex::ex_between(html_fin, "incomeBeforeTax\":{\"raw\":",
+                                     ",\"fmt\"")[[1]]
   PreIncTax <- PreIncTax[5]
   PreIncTax <- as.numeric(PreIncTax)
   PreIncTax <- data.frame(PreIncTax)
   T0Data <- bind_cols(T0Data,PreIncTax)
   
   # extrahiert das Cash Vermögen des Unternehmens
-  cash <- qdapRegex::ex_between(html_balance, "otherAssets", "total")[[1]]
-  cash <- qdapRegex::ex_between(html_balance, "\"cash\":{\"raw\":", ",\"fmt\":")[[1]]
+  cash <- qdapRegex::ex_between(html_balance, "otherAssets",
+                                "total")[[1]]
+  cash <- qdapRegex::ex_between(html_balance, "\"cash\":{\"raw\":",
+                                ",\"fmt\":")[[1]]
   cash <- cash[1]
   cash <- as.numeric(cash)
   cash <- data.frame(cash)
   T0Data <- bind_cols(T0Data, cash)
   
-  # Weißt dem data frame T0 data, die oben eingegeben TGR zu 
+  # weist dem data frame T0 data, die oben eingegeben TGR zu 
   T0Data<-data.frame(T0Data,TGR)
   
   out <- list(
@@ -478,11 +695,11 @@ DCF_data_scraper <- function(ticker, TGR = 0.025) {
 ```{r DCF daten Calenderization}
 # nimmt einen data frame und berechnet die calenderization für diesen
 calenderization <- function(toassaign_df) {
-  # nimmt die berechnetet rateofffye des DCF scrapers und weißt sie
+  # nimmt die berechnetet rateofffye des DCF scrapers und weist sie
   # einer neuen Variablen zu
   rateofffye <- scraped_DCF_data[[1]]$T0Data$rateofffye
   
-  # weißt der varibalen y den Wert 2 zu, damit später damit auf die zweite col
+  # weist der varibalen y den Wert 2 zu, damit später damit auf die zweite col
   # zugegriffen wird
    y<-2
    
@@ -508,7 +725,7 @@ calenderization <- function(toassaign_df) {
   x <- x-1
   toassaign_df[as.numeric(paste(x)),as.numeric(paste(y))] <- calen
   
-  # addiert wieder x + 1 damit die Schleife mit der nächsten Reihe weiter rechnet
+  # addiert x + 1 damit die Schleife mit der nächsten Reihe weiter rechnet
   x <- x+1
   }
   # wenn eine col mit der Hilfe der zweiten Schleife ersetzt wurde, wird 
@@ -523,94 +740,150 @@ calenderization <- function(toassaign_df) {
 }   
 ```
 
-```{r DCF Rechner}
-# Funktion für die berechnung des DCFs
+```{r, Flow Char Datenzuweisung}
+# erstellt einen flowchart für die Erklärung der Datenzuweisung
+grViz("digraph flowchart {
+        # graph statement
 
+         graph [layout = dot,
+         rankdir = TB,
+         fontsize = 8]
+
+  # definition der nodes mit dem substituierten label text
+      node [fontname = Helvetica, shape = rectangle]        
+      tab1 [label = '@@1']
+      tab2 [label = '@@2']
+      tab3 [label = '@@3']
+      tab4 [label = '@@4']
+      tab5 [label = '@@5']
+      tab6 [label = '@@6']
+      tab7 [label = '@@7']
+      tab8 [label = '@@8']
+     
+      # edges
+      # definiert die node und die darauffolgenden mit hilfe der node id
+      tab1 -> tab2 -> tab3 -> tab4 -> tab6 ->tab8 
+      tab4 -> tab7 
+      tab7 -> tab5[label = 'counter + 1']
+      tab5 -> tab1
+}
+
+      # die dargestellten Titel der nodes
+      [1]: 'ticker'
+      [2]: 'Data Scraping'
+      [3]: 'Data Assignement'
+      [4]: 'last row of df?'
+      [5]: 'next Row'
+      [6]: 'true'
+      [7]: 'false' 
+      [8]: 'assignement finished'
+    ")
+```
+
+```{r DCF Rechner}
+# Funktion für die Berechnung des Free Cash Flows
 DCF_calculation <- function(yearly_data = scraped_DCF_data[[1]]$yearly_data, 
                             T0Data = scraped_DCF_data[[1]]$T0Data,
                             ProjRev = scraped_DCF_data[[1]]$ProjRev$ProjRev) {
-
+  
+  # weist der Variablen das Jahr des letzten Jahres Financial Updates zu
   last_statement <- as.numeric(yearly_data$Year[4])
-  Year <- c(last_statement+1, last_statement+2, last_statement+3, last_statement+4,
-            last_statement+5, last_statement+6)
+  
+  # erstellt einen df mit den kommenden Jahren für die folgende Projektion
+  # der Geschäftszahlen
+  Year <- c(last_statement+1, last_statement+2, last_statement+3, 
+            last_statement+4, last_statement+5, last_statement+6)
   Projection <- data.frame(Year)
   
-  # calculates the Revenue growth rate and takes the mean for further 
-  # calculations
-  
+  # berechnet die Wachstumsrate des Revenues über die vergangend 4 Jahre und
+  # die von den Analysten Prognostizierten kommenden  2 Jahre
   RevGrowthRate <- c((yearly_data$TotalRevenue[2]/yearly_data$TotalRevenue[1])-1,
                      (yearly_data$TotalRevenue[3]/yearly_data$TotalRevenue[2])-1,
                      (yearly_data$TotalRevenue[4]/yearly_data$TotalRevenue[3])-1,
                      (ProjRev[1]/yearly_data$TotalRevenue[4])-1,
                      (ProjRev[2]/ProjRev[1])-1)
   
-  ## needs commentary
-  
+  # Bildet den Mittelwert der Wachstumsrate und erstellet einen df
+  # welcher die berechneten Daten beinhalten wird
   meanRevGrowthRate <- mean(RevGrowthRate)
   calc_df <- data.frame(meanRevGrowthRate)
   
+  # Berechnet den Anteil des EBITS an den vergangened Revenues und bildet den
+  # Mittelwert daraus
   EBITofRev <- c(yearly_data$EBIT[1:4]/yearly_data$TotalRevenue[1:4])
   meanEBITofRev <- mean(EBITofRev)
   meanEBITofRev <- data.frame(meanEBITofRev)
   calc_df <- bind_cols(calc_df,meanEBITofRev)
   
+  # Berechnet den Anteil der Steuern an den vergangened EBIT und bildet den
+  # Mittelwert daraus
   TaxesofEBIT <- c(yearly_data$IncTaxEx[1:4]/yearly_data$EBIT[1:4])
   meanTaxesofEBIT <- mean(TaxesofEBIT)
   meanTaxesofEBIT <- data.frame(meanTaxesofEBIT)
   calc_df <- bind_cols(calc_df,meanTaxesofEBIT)
   
+  # Berechnet den Anteil der der D&A (Depreciation and Amortization an den
+  # vergangened Revenue Zahlen und bildet den Mittelwert daraus
   DandAofRev <- c(yearly_data$DandA[1:4]/yearly_data$TotalRevenue[1:4])
   meanDandAofRev <- mean(DandAofRev)
   meanDandAofRev <- data.frame(meanDandAofRev)
   calc_df <- bind_cols(calc_df,meanDandAofRev)
   
+  # Berechnet den Anteil des CapEx ( Capital Expenditure) an den vergangened 
+  # Revenues und bildet den Mittelwert daraus
   CAPEXofRev <- c(yearly_data$CAPEX[1:4]/yearly_data$TotalRevenue[1:4])
   meanCAPEXofRev <- mean(CAPEXofRev)
   meanCAPEXofRev <- data.frame(meanCAPEXofRev)
   calc_df <- bind_cols(calc_df,meanCAPEXofRev)
   
+  # Berechnet den Anteil des cNWC( change of net working capital) an den 
+  # vergangened Revenues und bildet den Mittelwert daraus
   cNWCofRev <- c(yearly_data$cNWC[1:4]/yearly_data$TotalRevenue[1:4])
   meancNWCofRev <- mean(cNWCofRev)
   meancNWCofRev <- data.frame(meancNWCofRev)
   calc_df <- bind_cols(calc_df,meancNWCofRev)
   
-  # takes the Revenue growth rate and projects the future Revenue
-  
-  rev3 <-  (ProjRev[2]*calc_df$meanRevGrowthRate+ProjRev[2])*calc_df$meanRevGrowthRate+(ProjRev[2]*
-                                calc_df$meanRevGrowthRate+ProjRev[2])
+  # Projiziert mit der mittleren revenue growth rate den zukünftigen revnue
+  # die Variablen rev3:4 werden der Übersicht halber erstellt und im Anschluss
+  # entfernt
+  rev3 <-  (ProjRev[2]*calc_df$meanRevGrowthRate+ProjRev[2])*
+           calc_df$meanRevGrowthRate+(ProjRev[2]*
+           calc_df$meanRevGrowthRate+ProjRev[2])
   rev4 <- rev3*calc_df$meanRevGrowthRate+rev3
   rev5 <- rev4*calc_df$meanRevGrowthRate+rev4
-  
   Rev_Proj <- c(ProjRev,
               (ProjRev[2]*calc_df$meanRevGrowthRate+ProjRev[2]),
               rev3, rev4, rev5)
   rm(rev3,rev4,rev5)
-  
   Rev_Proj <- data.frame(Rev_Proj)
   Projection <- bind_cols(Projection,Rev_Proj)
   
+  # Projection des EBIT anhand des mittleren Anteils am Revenue
   EBIT_Proj <- c(Projection$Rev_Proj[1:6]*calc_df$meanEBITofRev)
   EBIT_Proj <- data.frame(EBIT_Proj)
   Projection <- bind_cols(Projection, EBIT_Proj)
   
+  # Projection der Steuern anhand des mittleren Anteils am EBIT
   Taxes_Proj <- c(Projection$EBIT_Proj[1:6]*calc_df$meanTaxesofEBIT)
   Taxes_Proj <- data.frame(Taxes_Proj)
   Projection <- bind_cols(Projection, Taxes_Proj)
   
+  # Projection des D&A anhand des mittleren Anteils am Revenue
   DandA_Proj <- c(Projection$Rev_Proj[1:6]*calc_df$meanDandAofRev)
   DandA_Proj <- data.frame(DandA_Proj)
   Projection <- bind_cols(Projection, DandA_Proj)
   
+  # Projection des CapEx anhand des mittleren Anteils am Revenue
   CAPEX_Proj <- c(Projection$Rev_Proj[1:6]*calc_df$meanCAPEXofRev)
   CAPEX_Proj <- data.frame(CAPEX_Proj)
   Projection <- bind_cols(Projection, CAPEX_Proj)
   
+  # Projection des cNWC anhand des mittleren Anteils am Revenue
   cNWC_Proj <- c(Projection$Rev_Proj[1:6]*calc_df$meancNWCofRev)
   cNWC_Proj <- data.frame(cNWC_Proj)
   Projection <- bind_cols(Projection, cNWC_Proj)
   
-  #Calenderization of Data.frames
-  
+  # Umbenennung der col Names des Projection dfs
   Projection <- Projection %>% 
     rename(
       TotalRevenue = Rev_Proj,
@@ -621,47 +894,60 @@ DCF_calculation <- function(yearly_data = scraped_DCF_data[[1]]$yearly_data,
       cNWC = cNWC_Proj
     )
     
+  # erstellt einen df mit den Daten der Projection und der Daten der vergangen
+  # 4 Jahre 
   yearly_and_proj <- bind_rows(yearly_data[2:7], Projection[2:7])
   Year <- c(as.numeric(yearly_data[,1]),Projection[,1])
   Year <- data.frame(Year)
   past_and_proj <- bind_cols(Year, yearly_and_proj)
   
+  # wendet die Funktion calenderization auf past_and_proj an. um die an das 
+  # CYE (Calended Year End) anzupassen und bildet einen neuen df, die letzte
+  # reihe wird enfernt, da sie keine daten enthält
   calended_data <- calenderization(past_and_proj) 
   calended_data <- calended_data$list
   calended_data <- slice(calended_data,1:(nrow(calended_data)-1))
   
-  # calculates EBIAT (earnings before interes after taxes)
-  # EBIT - Taxes
+  # berechnet EBIAT (earnings before interest after taxes)
+  EffTaxRate <- c(calended_data$IncTaxEx[1:5]/calended_data$EBIT[1:5])
+  EBIAT <- calended_data$EBIT[1:nrow(calended_data)]*(1-EffTaxRate)
   
-  EBIAT <- c(calended_data$EBIT[1:nrow(calended_data)]-
-               calended_data$IncTaxEx[1:nrow(calended_data)])
+  # EBIAT <- c(calended_data$EBIT[1:nrow(calended_data)]-
+  #              calended_data$IncTaxEx[1:nrow(calended_data)])
   EBIAT <- data.frame(EBIAT)
   calended_data <- bind_cols(calended_data, EBIAT)
   
-  
+  # berechnet den uFCF (unlevered Free Cash Flow)
   FCF <- c(calended_data$EBIAT[1:9]+calended_data$DandA[1:9]-
              calended_data$CAPEX[1:9]-calended_data$cNWC[1:9])
   FCF <- data.frame(FCF)
   calended_data <- bind_cols(calended_data, FCF)
   
-  
-  # calculates left over days of the year for mid year convention
-  # todays date from Sys.Date
+  # berechnet die übrigen Tage des Jahres für die mid year convention 
+  # (berücksichtigt den ständigen Cash Flow)
+  # erstellt eine Variavle mit dem aktuellen Datum
   
   date <- format(Sys.Date())
   
-  # defines the last day of the year
+  # definiert den letzten Tag des Jahres
   
   end_year <- ceiling_date(Sys.Date() %m-% months(1), 'year') %m-% days(1)
 
-  # calculates the days between currend date and end of the year
+  # berechnet die differenz zwischen aktuellen Datum und dem Ende des Jahres
   
   days <- difftime(end_year, date)
   days <- as.numeric(days)
+  # berechnet den Anteil am Jahr und anschließen daran. die mid year convention
   pofyear <- round(days/365,2)
   midyear <- round(pofyear/2,2)
   
-  DiscountYear <- c(rep("NA", 4), midyear, pofyear+0.5, pofyear+1.5, pofyear+2.5, pofyear+3.5)
+  # die discount period wird berechnet, da durch das Angebrochene Jahr, werden
+  # die discount perioden weniger gewertet
+  # eventuell sollte dies noch auf die Industry angepasst werden, da mid year
+  # convention bei cyclischen Gütern weniger Sinn macht als bei Firmen mit
+  # stätigem Cashflow
+  DiscountYear <- c(rep("NA", 4), midyear, pofyear+0.5, pofyear+1.5, 
+                    pofyear+2.5, pofyear+3.5)
   DiscountYear <- data.frame(DiscountYear)
   calended_data <- bind_cols(calended_data, DiscountYear)
   
@@ -671,15 +957,174 @@ DCF_calculation <- function(yearly_data = scraped_DCF_data[[1]]$yearly_data,
   )
   return(out)
 }
-
-
 ```
 
+```{r WACC Data}
+# Erstellt eine Funktion zur Berechnung des WACCs (weighted average cost of
+# capital)
 
+WACC_calculation <- function(T0Data = scraped_DCF_data[[1]]$T0Data) {
+  
+  # weisst der Variablen die benötigten  daten aus der List zu
+  calended_data <- DCF_calc_data$calended_data
+  
+  # berechnet mit der Bondrate, Beta und dem equity risk premium 
+  # die cost of equity
+  coe <- T0Data$BR+T0Data$Beta*T0Data$erp
+  T0_cal <- data.frame(coe)
+  
+  # berechnung der Schulden
+  Debt <- T0Data$CurrDebt+T0Data$LongDebt
+  Debt <- data.frame(Debt)
+  T0_cal <- bind_cols(T0_cal, Debt)
+  
+  
+  # Berechnung der Schuldenrate
+  AvRate <- T0Data$IntExpense/(T0Data$LongDebt+T0Data$CurrDebt)
+  AvRate <- data.frame(AvRate)
+  T0_cal <- bind_cols(T0_cal,AvRate)
+  
+  # Berechnung des Effektivsteuersatz
+  EffTaxRate <- c(calended_data$IncTaxEx[1:5]/calended_data$EBIT[1:5])
+  EffTaxRate <- mean(EffTaxRate)
+  EffTaxRate <- data.frame(EffTaxRate)
+  T0_cal <- bind_cols(T0_cal,EffTaxRate)
+  
+  # Berechnung des Kapitals 
+  TotCap <- T0Data$MarkCap+T0_cal$Debt
+  TotCap <- data.frame(TotCap)  
+  T0_cal <- bind_cols(T0_cal,TotCap)
+  
+  # Berechnung der weight of debt (Gewichtung der Schulden)
+  w_d <- T0_cal$Debt/T0_cal$TotCap
+  w_d <- data.frame(w_d)
+  T0_cal <-bind_cols(T0_cal,w_d)
+  
+  # Berechnung der weight of equity (Gewichtung des Kapitals)
+  w_e <- 1-T0_cal$w_d
+  w_e <- data.frame(w_e)
+  T0_cal <- bind_cols(T0_cal,w_e)
+  
+  # Berechnung des WACC
+  WACC <- (T0_cal$w_e*T0_cal$coe)+(T0_cal$w_d*T0_cal$AvRate*(1-T0_cal$EffTaxRate))
+  WACC <- data.frame(WACC)
+  T0_cal <- bind_cols(T0_cal, WACC)
+  
+  # Da Yahoo Finance nicht immer alle alle Schulden richtig Updated, 
+  # (bsp. Snowflake) wird falls sich das WACC durch nicht auftauchende Zahlen 
+  # unter einem Wert von 7% befindend, die RRR (required rate of return) auf
+  # einen Wert von 0.07 angehoben. Dies passiert auch bei Firmen, welche alle
+  # Daten korrekt abgebildet haben, da eine RRR von 7% gewünscht wird.
+  if(isTRUE(T0_cal$WACC>0.07)){
+    RRR <- T0_cal$WACC
+  } else {
+    RRR <- 0.07
+  }
+  RRR <- data.frame(RRR)
+  T0_cal <- bind_cols(T0_cal,RRR)
+  
+  out <- list(
+    T0_cal = T0_cal
+  )
+  return(out)
+  }
+```
 
+```{r Implied Share Price Funktion, results='hide'}
+# Erstellt eine Funktion zur Berechnung des implizierten Aktienpreises 
+# (implizierten Aktienpreise)
+
+Imp_Share_Price_calculation <- function() {
+ 
+  # weisst der Variablen die benötigten  daten aus der List zu
+  T0_cal <- WACC_data$T0_cal
+  calended_data <- DCF_calc_data$calended_data
+  T0Data <- scraped_DCF_data[[1]]$T0Data
+  
+  # attach ermöglicht direkt Zugriff auf die Variablen
+  attach(T0_cal)
+  attach(calended_data)
+  
+  # berechnet den unlevered free cash flows
+  PUnlevFCF <- c(rep("NA", 4), FCF[5:9]/(1+RRR)^as.numeric(DiscountYear[5:9]))
+  detach(calended_data)
+  
+  # berechnet den terminal value
+  TermValue <- calended_data$FCF[9]*(1+T0Data$TGR)/(RRR-T0Data$TGR)
+  
+  # berechnung des aktuellen Wertes des terminal values
+  PTermValue <- TermValue/(1+RRR)^as.numeric(calended_data$DiscountYear[9])
+  detach(T0_cal)
+  
+  # berechnet den Enterprise Value
+  EntpriVal <- sum(as.numeric(PUnlevFCF[5:9]))+PTermValue
+  
+  # Da Yahoo Finance nicht immer alle Schulden richtig Updated, und im Fall von 
+  # NAs der Equity Value ebenfalls NA ausgegeben wird, ist hier eine if Schleife
+  # welche bei Schulden welche geringer als 0 sind die Schulden als 0 annimmt.
+  # dies führt zu einer besseren Bewertung des Unternehmens, lässt jedoch
+  # wenigstens eine zu
+  if(isTRUE(T0Data$Debt<0)){
+    Debt <-T0_cal$Debt
+  }else {
+    Debt <- 0
+  }
+  
+  # Berechnet den Kapitalwert des Unternehmens
+  EquValue <- EntpriVal+T0Data$cash-Debt
+
+  # Berechnent den Implied Share Price   
+  ISP_data<- round(EquValue/T0Data$floatshares)
+  out <- list(
+    ISP = ISP_data,
+    EntpriVal = EntpriVal,
+    EquValue = EquValue,
+    PTermValue = PTermValue,
+    PUnlevFCF = PUnlevFCF[5:9]
+  )
+  return(out)
+}
+```
+
+```{r Book Value data}
+# Erstellt eine Funktion zur Berechnung des price to book value
+
+bookv_data <- function(ticker) {
+  
+  # weist der URL den ticker zu und ließt den HTML Text aus
+  url_stats <- paste0('https://finance.yahoo.com/quote/',
+                      ticker, '/key-statistics?p=', ticker)
+  html_stats <- read_html(url_stats) %>% html_node('body') %>% 
+    html_text() %>% toString()
+   url_profile <- paste0('https://finance.yahoo.com/quote/', ticker)
+  html_profile <- read_html(url_profile) %>% html_node('body') %>% 
+    html_text() %>% 
+    toString()
+  
+  # extrahiert den Book Value per Share
+  BVS <- qdapRegex::ex_between(html_stats, "Book Value Per Share (mrq)", 
+                               "Cash Flow ")[[1]]
+  BVS <- as.numeric(BVS)
+  
+  # nimmt den Preis aus dem Stocks df und berechnet mit dem BVS den
+  # Price per Book Value
+  PB <- round(as.numeric(Stocks$Price[x])/BVS,2)
+  
+  out <- data.frame (
+    PB = PB
+  )
+}
+```
 
 ```{r Anwendung des DCF Scrapers und Berechnungen, results='hide'}
+# die Ergebnisse sind versteckt, da es das HTML Dokument unleserlich machen
+# würde, die ausgaben sind für die Nutzerfreundlichkeit gedacht
+
+# weisst der Variablen die bereits erhaltenen Unternehmens Daten zu
 toassaign_df <- Stocks
+
+# Beginn der Zählunbg der while Schleife und erstellt weiter cols für die
+# kommenden Daten
   x<-1
   DCF_ISP <-"DCF_ISP"
   DCF_ISP <- data.frame(DCF_ISP)
@@ -687,7 +1132,675 @@ toassaign_df <- Stocks
   PB <- data.frame(PB)
   toassaign_df<- bind_cols(toassaign_df, DCF_ISP)
   toassaign_df<- bind_cols(toassaign_df, PB)
+
+# Eine while Schleife wird erstellt welche bei x anfängt zu Zählen, bis das ende
+# der Reihen erreicht ist
+  while (x<=nrow(toassaign_df)) {
+    # weisst der Varibalen die Firma zu, damit diese ausgegeben weden kann,
+    # damit der Benutzer einen Fortschritt erkennt
+    company <- toassaign_df[paste(x),1]
+    print(paste("checking Sector", x, "of",nrow(toassaign_df), "of", company))
+    # der ticker wird für die DCF scraper Funktion zugewiesen
+    ticker <- toassaign_df[paste(x),2]
+    # Überpürft ob das Unternehmen der Industry Banks—Diversified oder 
+    # Capital Markets angehört, da diese sich nicht für eine DCF Bewertung 
+    # eignen. ISt dies nicht der Fall wird der DCF berechnet, ist dies der fall
+    # wird die DCF übersprungend und nur der Price to book value zugewiesen
+    check_for_fin <- isTRUE(toassaign_df[paste(x),3]=="Banks—Diversified" 
+                            || toassaign_df[paste(x),3]=="Capital Markets" )
+    if(check_for_fin=="FALSE"){
+      print(paste("applying DCF scraper to", company))
+      scraped_DCF_data <- lapply(toassaign_df$Ticker[as.numeric(paste(x))],
+                                 DCF_data_scraper)
+      print(paste("calculating fair value of", company))
+      # wendet die DCF_calculation Funktion an
+      DCF_calc_data <- DCF_calculation()
+      # wendet die WACC_calculation Funktion an
+      WACC_data <- WACC_calculation()
+      # wendet die Funktion fpr den implied share price an
+      ISP_data <- Imp_Share_Price_calculation()
+      # weist dem df den implied share price zu
+      toassaign_df[paste(x),7] <- ISP_data$ISP
+      print(paste("applying book value scraper to", company))
+      # weist dem df den book value pro Aktie zu
+      toassaign_df[paste(x),8] <- bookv_data(ticker)
+    }
+    else {
+      # Nachrricht für den Benutzer 
+      print(paste("applying book value scraper to", company))
+      # weisst Banken ein NA in der col DCF_ISP zu und weist den P/B zu
+      toassaign_df[paste(x),7] <- "NA"
+      toassaign_df[paste(x),8] <- bookv_data(ticker)
+    }
+    x<-x+1
+  }
   
+# wandelt die daten in numerische charaktere um
+toassaign_df$PB <- as.numeric(toassaign_df$PB)
+toassaign_df$DCF_ISP <- as.numeric(toassaign_df$DCF_ISP)  
+toassaign_df$Price <- as.numeric(toassaign_df$Price)
+toassaign_df$PE <- as.numeric(toassaign_df$PE)
+Stocks <- toassaign_df
+
+rm(DCF_calc_data,DCF_ISP,ISP_data, PB, scraped_DCF_data,toassaign_df,WACC_data,
+   company, ticker, check_for_fin,x)
+
 
 ```
+
+```{r Auswahl der besten Aktien}
+# Die Top 4 Akiten (Top 2 DCF und Top 2 P/B) werden dem data frame entommen
+
+# welcher unter dem aktuellen Preis liegt
+picks_DCF_ISP <- Stocks[Stocks$Price < Stocks$DCF_ISP,]
+
+# entfern alle reihen mit NAs, was dazu führt, dass Banken entfernt werden
+picks_DCF_ISP <- picks_DCF_ISP %>% drop_na()
+
+# berechnet den Prozentsatz mit welcher das Unternehmen unter dem aktuellen
+# Aktienkurs liegt
+p_under_DCF_ISP <- (1-round(picks_DCF_ISP$Price/picks_DCF_ISP$DCF_ISP, 2))*100
+p_under_DCF_ISP <- data.frame(p_under_DCF_ISP)
+
+# erstellt einen data frame aus den Prozentsätzen und den gewählten Unternehmen
+picks_DCF_ISP<- bind_cols(picks_DCF_ISP,p_under_DCF_ISP)
+
+# sortiert den data frame absteigend nach dem größten Unterschied zum Aktienkurs
+# zuerst
+picks_DCF_ISP <- picks_DCF_ISP %>%
+  arrange(desc(p_under_DCF_ISP))
+
+# entfernt alles bis auf die ersten beiden Reihen   
+picks_DCF_ISP <- slice(picks_DCF_ISP,1:2)
+
+
+# entnimmt dem data frame Stocks alle Banken und alle Unternehmen mit einer
+# P/B ration zwischen 0 und 1.5
+picks_fin <- Stocks %>% filter(
+  Industry == "Banks—Diversified" | Industry == "Capital Markets")
+picks_fin <- picks_fin[picks_fin$PB < 1.5,]
+picks_fin <- picks_fin[picks_fin$PB > 0,]
+
+# sortiert nach P/B von niedrig nach hoch und trennt die ersten 2 Reihen ab
+picks_fin <- picks_fin %>%
+  arrange(PB)
+picks_fin <- slice(picks_fin,1:2)
+
+# erstellt einen kombinierten data frame der picks und entfernt die col
+# der prozentsätze
+picks <- data.frame(picks_DCF_ISP)
+picks <- bind_rows(picks, picks_fin)
+droping <- "p_under_DCF_ISP"
+picks <- picks[ , !(names(picks) %in% droping)]
+
+# da durch die umsortierung die reihen namen durcheinander gekommen sind, werden
+# diese umbeannt
+rownames(picks)<- c(1:nrow(picks))
+
+# col namen werden umbenannt, würde auch wie die row namen 
+# oben funktionieren, jedoch wird durch dieses verfahren eine col nur umbenannt 
+# wenn diese mit ihrem Namen exisitiert
+picks <- picks %>% 
+    rename(
+      "P/E" = PE,
+      "Implied share value" = DCF_ISP,
+      "P/B" = PB
+    )
+
+# entfernt alle nicht mehr benötigten Datensätze
+rm(p_under_DCF_ISP,picks_DCF_ISP,picks_fin)
+```
+
+```{r Flow Chart}
+# erstellt einen flowchart für die bessere Übersicht, wie die Auswahl der 
+# Aktienpicks stattfindet
+grViz("digraph flowchart {
+      # definition der nodes mit dem substituierten label text
+      node [fontname = Helvetica, shape = rectangle]        
+      tab1 [label = '@@1']
+      tab2 [label = '@@2']
+      tab3 [label = '@@3']
+      tab4 [label = '@@4']
+      tab5 [label = '@@5']
+      tab6 [label = '@@6']
+      tab7 [label = '@@7']
+      tab8 [label = '@@8']
+      tab9 [label = '@@9']
+     
+      # definiert die node und die darauffolgenden mit hilfe der node id
+      tab1 -> tab2 -> tab4 -> tab5 -> tab6 -> tab7
+      tab1 -> tab3 -> tab8 -> tab9 -> tab6
+}
+      # die dargestellten Titel der nodes
+      [1]: 'Stocks'
+      [2]: 'Non Financial Stocks'
+      [3]: 'Financial Stocks'
+      [4]: 'Price lower as DCF implied share price'
+      [5]: 'Top 2 highest ISP diff to Price'
+      [6]: 'Picks to watch'
+      [7]: 'Deeper analysis'
+      [8]: 'P/B between 0 and 1.5'
+      [9]: 'Top 2 lowest P/B'
+      ")
+```
+
+```{r Stock chart comperisisson}
+
+# die durch das picking ausgewählten Unternehmen werden dem vektor ticker 
+# zugewiesen
+ticker <- picks$Ticker
+
+# Zählt 5 Jahre zurück und setzt dieses Datum als Start Datum für die Graphen  
+start_date <- ymd(format(Sys.Date())) - years(5)
+
+# läd die Preis Daten im Zeitraum t - 5 Jahre und heute herunter
+prices <- tq_get(ticker,
+                 from = start_date,
+                 to = format(Sys.Date()),
+                 get = "stock.prices")
+
+# nennt die col symbol in ticker um (da bisher so gehandhabt)
+prices <- prices %>% 
+    rename(
+      ticker = symbol,
+    )
+
+# berechnet den Mittelwert der Preise für die ticker und fasst diese zusammen
+mean_prices <- prices %>% group_by(ticker)%>%summarise(mean=mean(adjusted))
+
+# erstellt einen data frame für die Währung in welcher die Unternehmensdaten
+# veröffentlicht wurden arrangiert diese so, dass sie dem Unternehmen zugewiesen
+# werden kann
+curr <- picks %>% arrange(Ticker)
+curr <- curr$Currency
+curr <- data.frame(curr)
+mean_prices <- bind_cols(mean_prices, curr)
+
+# plottet ein linien diagram aus den Unternehmen 
+print(picksplot <- prices %>%
+          ggplot(aes(x = date, y = adjusted, color = ticker)) +
+          geom_line()+
+          # fügt eine linie ein, welche den mittelwert abbildet
+          geom_hline(data = mean_prices, aes(yintercept = mean, color = ticker))+
+          # sapltet die sonst in einem diagramm dargestellten 4 Unternehmen 
+          # in 4 einzelne diagramme auf
+          facet_wrap(~ticker,scales = 'free_y')+
+          # sauberers theme
+          theme_classic()+
+          # bennent den Titel und x und y Achse des Diagramms
+          labs(x = 'Year',
+           y = "Adjusted Price",
+           title = "Stocks to watch") +
+           scale_x_date(date_breaks = "year",
+               date_labels = "%y")+
+          # Fügt den Mittelwert incl. der Währung über der Mittelwertlinie ein
+          geom_text(data = mean_prices, aes(x = prices$date[300], y = mean, 
+                    label = paste("avg.", round(mean,2), curr), vjust = -2), 
+                    show.legend = F))
+          
+```
+
+```{r Cash Flow Table, results='hide'}
+# Es wird ein Unternehmen ausgewählt, welches einer genaueren 
+# Betrachtung unterzogen werden soll
+ticker <- "NKE"
+Ticker <- data.frame(ticker)
+
+# Da die Daten im ersten scraping durchgang nicht einheitlich sind, da Zeit
+# bei den Banken gespart werden soll, müssen hier die Geschäftszahlen 
+# erneut gescraped und die Berechnungen angewand werden
+Stock <- basics_assignement(Ticker)
+scraped_DCF_data <- lapply(ticker, DCF_data_scraper)
+DCF_calc_data <- DCF_calculation()
+WACC_data <- WACC_calculation()
+
+# ermöglicht kürzere variablen namen für den zugriff auf Daten
+attach(DCF_calc_data$calended_data)
+
+DCF_data_CYE <- data.frame(DCF_calc_data$calended_data[2:9])
+# stellt alle Daten in Millionen $ dar
+DCF_data_CYE <- round(DCF_data_CYE[1:8]/1000000)
+# Wachstunmsrate des Revnues
+p_growth_Rev <- c("-", (TotalRevenue[2:9]/TotalRevenue[1:8]-1))
+# Fügt die col nach der col mit dem namen TotalRevenue ein
+DCF_data_CYE <- add_column(DCF_data_CYE, p_growth_Rev = p_growth_Rev,
+                           .after = "TotalRevenue")
+# Berechnet den Operating Margin
+Operating_Margin <- EBIT[1:9]/TotalRevenue[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, Operating_Margin = Operating_Margin,
+                           .after = "EBIT")
+# Anteil der Steuern am EBIT
+p_of_EBIT <- IncTaxEx[1:9]/EBIT[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, p_of_EBIT = p_of_EBIT,
+                           .after = "IncTaxEx")
+# Anteil der D&A am Revenue
+DandA_p_of_Rev <- DandA[1:9]/TotalRevenue[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, DandA_p_of_Rev = DandA_p_of_Rev,
+                           .after = "DandA")
+# Anteil der CapEx am Revenue
+CapEx_p_of_Rev <- CAPEX[1:9]/TotalRevenue[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, CapEx_p_of_Rev = CapEx_p_of_Rev,
+                           .after = "CAPEX")
+# Anteil der change in NWC am Revenue
+cNWC_p_of_Rev <- cNWC[1:9]/TotalRevenue[1:9]
+DCF_data_CYE <- add_column(DCF_data_CYE, cNWC_p_of_Rev = cNWC_p_of_Rev,
+                           .after = "cNWC")
+# Wachstumsrate des FCF
+p_growth_FCF <- c("-", (FCF[2:9]/FCF[1:8]-1))
+DCF_data_CYE <- add_column(DCF_data_CYE, p_growth_FCF = p_growth_FCF,
+                           .after = "FCF")
+# Present value of FCF
+pres_val_of_FCF <- c(rep(NA,4),round((FCF[5:9]/
+              (1+WACC_data$T0_cal$RRR)^as.numeric(DiscountYear[5:9])/1000000)))
+pres_val_of_FCF <- data.frame(pres_val_of_FCF)
+DCF_data_CYE <- bind_cols(DCF_data_CYE,pres_val_of_FCF)
+# detach die Daten wieder, damit keine Maskierung entstht
+detach(DCF_calc_data$calended_data)
+
+# entfernt die ersten beiden Reihen
+DCF_data_CYE <- DCF_data_CYE[3:9,]
+# wandelt nicht numerische charaktere in numerische um
+DCF_data_CYE$p_growth_Rev <- as.numeric(DCF_data_CYE$p_growth_Rev)
+DCF_data_CYE$p_growth_FCF <- as.numeric(DCF_data_CYE$p_growth_FCF)
+# dreht tabelle, damit die col jetzt rows sind
+DCF_data_CYE <- t(DCF_data_CYE)
+
+# erstellt einen dataframe für die Jahre 
+Year <- DCF_calc_data$calended_data$Year[3:4]
+Year <- c(Year, paste0(Year[2]+1, "E"), paste0(Year[2]+2, "E"),
+          paste0(Year[2]+3, "E"), paste0(Year[2]+4, "E"), paste0(Year[2]+5, "E"))
+colnames(DCF_data_CYE) <- Year
+
+# erstellt den Vektor Year mit den gewünschten Namen der Rows
+Year <- c("Revenue","growth y-o-y", "EBIT", "Operating margin", 
+                             "Taxes","% of EBIT", "D&A", "% of revenue", "CapEx",
+                             "% of revenue", "Change in NWC", "% of revenue",
+                             "EBIAT", "uFCF", "growth y-o-y",  "Present value of FCF" )
+
+# wandelt den data frame in einen tibble um, dieser kann mit dem gt packege als 
+# schöne tabellen dargestellt werden und fügt die col Year am beginn des tibble
+# ein
+DCF_data_CYE <- as_tibble(DCF_data_CYE)
+DCF_data_CYE <- DCF_data_CYE %>% add_column(Year, .before = "2021")
+
+# erstellt aus dem tibble eine Tabelle
+DCF_table_CYE <- gt(DCF_data_CYE)
+
+# veränderungen an der Tabelle
+DCF_table_CYE <- 
+  DCF_table_CYE %>%
+  # gibt der Tabelle einen Titel und Untertitel, mit glue können Variablen 
+  # eingefügt werden, ähnlich wie mit paste, jedoch kürzer bei mehreren, hier
+  # eventuell unnötig
+  tab_header(
+    title = glue("{Stock$list$Company} Discounted Cash Flow"),
+    subtitle = glue("{Stock$list$Currency} in millions")
+  ) %>%
+  # wandelt die Daten in den cols und rows in % um und rundet diese auf eine
+  # Nachkommastelle
+  fmt_percent(
+    columns = c(2:8),
+    rows = c(2,4,6,8,10,12,15),
+    decimals = 1
+  ) %>%
+  # Fügt den Daten in den cols und rows ein $ hinzu und rundet diese auf 0
+  # Nachkommastelle
+    fmt_currency(
+    columns = c(2:8),
+    rows = c(1,3,5,7,9,11,13,14,16),
+    currency = "USD",
+    decimals = 0
+    ) %>% 
+  # erlaubt das Färben von Zellen 
+  tab_style(
+    style = list(
+      cell_fill(color = "deepskyblue2")
+    ),
+    # Fräbt Zellen in den angegeben cols und rows
+    locations = cells_body(
+      columns = c(2:8),
+      rows = 14)
+  ) %>%
+  tab_style(
+    style = list(
+      cell_fill(color = "deepskyblue2")
+    ),
+    # Fräbt Zellen in den angegeben cols und rows
+    locations = cells_body(
+      columns = c(4:8), 
+      rows = 16)
+)
+rm(Year,start_date,p_of_EBIT,p_growth_Rev,p_growth_FCF,Operating_Margin,droping,
+   DandA_p_of_Rev,cNWC_p_of_Rev,CapEx_p_of_Rev, ticker)
+DCF_table_CYE
+```
+
+```{r Price per Share Table}
+# Berechnet die ISP daten
+ISP_data <- Imp_Share_Price_calculation()
+
+attach(ISP_data)
+attach(scraped_DCF_data[[1]]$T0Data)
+attach(Stock$list)
+# berechnet den Discount zwischen Preis und ISP
+Discount <- 1-as.numeric(Price)/ISP
+Discount <- data.frame(Discount)
+PTermValue <- data.frame(PTermValue)
+EntpriVal <- data.frame(EntpriVal)
+EquValue <- data.frame(EquValue)
+floatshares <- data.frame(floatshares)
+ISP <- data.frame(ISP[1])
+Price <- data.frame(Price)
+Tot_PV_p_FCF <- sum(as.numeric(PUnlevFCF))
+Tot_PV_p_FCF <- data.frame(Tot_PV_p_FCF)
+detach(ISP_data)
+detach(scraped_DCF_data[[1]]$T0Data)
+detach(Stock$list)
+
+# Berechnet den summierten present value des FCF
+
+PPS_data <- bind_cols(Tot_PV_p_FCF,PTermValue,EntpriVal,EquValue,
+                      floatshares, ISP, Price, Discount )
+
+PPS_data$Price <- as.numeric(PPS_data[7])
+# Stellt die Zahlen in millionen dar
+PPS_data[1:5] <- round(PPS_data[1:5]/1000000)
+# dreht die den data frame 
+PPS_data <- t(PPS_data)
+# weist der Varibalen das aktuelle Jahr zu(ohne Monat und Tag)
+curYear <- format(Sys.Date())
+curYear <- year(curYear)
+
+colnames(PPS_data) <- curYear
+Year <- c("Total PV of proj. FCF", "PV Terminal VAlue", "Enterprise Value",
+          "Equity Value", "Shares outstanding", "Implied Share Price", 
+          "Current Share Price", "Discount")
+
+# erstellt einen tibble und erweitert den data frame um das aktuelle Jahr
+PPS_data <- as_tibble(PPS_data)
+PPS_data <- PPS_data %>% add_column(Year, .before = "2022")
+
+# erstellt mit gt eine schöne Tabelle
+PPS_table <- gt(PPS_data)
+
+# Veränderungen an der Tabelle
+PPS_table <- 
+  PPS_table %>%
+  tab_header(
+    # erstellt einen Titel und Untetitel
+    title = "Price per Share",
+    subtitle = glue("Numbers in millions, unless otherwise stated")
+  ) %>%
+  # stellt die Zahlen der Zellen in Prozent mit einer Nachkommastelle dar
+  fmt_percent(
+    columns = `2022`,
+    rows = 8,
+    decimals = 1
+  ) %>%
+  # weist den Zahlen der Zellen ein Dollarzeichen zu
+    fmt_currency(
+    columns = `2022`,
+    rows = c(1,2,3,4,6,7),
+    currency = "USD",
+    decimals = 0
+    )  %>%
+  tab_footnote(
+    # weist den Zahlen der Zellen eine Fußnote zu
+    footnote = "not in millions",
+    locations = cells_body(
+    columns = 1, 
+    rows = 6:8)
+  ) %>%
+  # fräbt die Zelle ein
+tab_style(
+    style = list(
+      cell_fill(color = "deepskyblue2")
+    ),
+    locations = cells_body(
+      columns = c(2),
+      rows = 6)
+)
+
+rm(curYear, Discount, Tot_PV_p_FCF)
+PPS_table
+
+```
+
+```{r Revenue and EBIT Bar Graph, results='hide'}
+# erstellt einen data frame für die graphische Projektion des EBIT und Revenues
+bar_graph_data <- bind_cols(DCF_calc_data$calended_data[1],
+                            round(DCF_calc_data$calended_data[2:3]/1000000))
+colnames(bar_graph_data) <- c("Year","Revenue","EBIT")
+
+# mithilfe der melt funktion wird der data frame so verschmolzen, das sich dieser
+# besser für die darstellung eines bar graphs eignet, die id sind hier die Jahre
+# und das Total Revenue und Ebit werden in einer col dargestellt
+mel_bar_data <- reshape2::melt(bar_graph_data, id.var = "Year")
+
+# erstellt einen bar graph 
+bar_graph_rev_EBIT  <- ggplot(mel_bar_data, aes(x=Year, y=value,
+                                                fill = variable)) + 
+  geom_bar(stat = "identity", position = "dodge")+
+  # classic theme für schönere Darstellung
+  theme_classic()+
+  # verschiebt die Legenede oberhalb des Graphens und entfernt den Legenden Namen
+  theme(legend.position="top",
+        legend.title=element_blank())+
+  # ändert den y-Achsen Titel
+  ylab("USD in Millions")+
+  # passt die Beschriftung der x-Achse an und dreht diese um 45°
+  theme(axis.text.x = element_text(angle = 45, vjust = 0.5))+
+  # hiermit wird die x_Achsen Beschriftung konstant angezeigt wie sie im
+  # data frame enthalten ist
+  scale_x_continuous("Year", labels = as.character(bar_graph_data$Year),
+                     breaks = bar_graph_data$Year)+
+# Fügt dem Graphen einen Titel hinzu
+ ggtitle("Revenue and EBIT development")
+plot(bar_graph_rev_EBIT)
+
+```
+
+```{r Nike, S$P500 and Competitors}
+# Vergleich von Nike mit dem SP500 und zwei Wettbewerbern
+ticker <- c("NKE", "^GSPC","ADDYY", "UA" )
+
+# Zählt 5 Jahre zurück  
+start_date <- ymd(format(Sys.Date())) - years(5)
+
+# erstellt ein Datum für jedes Jahr der letzten 5 Jahre bis Heute
+start_date <- start_date + days(2)
+year1 <- start_date + years(1) 
+year2 <- start_date + years(2) 
+year3 <- start_date + years(3) + days(2)
+year4 <- start_date + years(4) + days(2)
+lastdate <- ymd(format(Sys.Date())) - days(2)
+
+# entnimmt die Preise für die eingefügten Ticker (incl. Volumen)
+prices <- tq_get(ticker,
+                 from = start_date,
+                 to = format(Sys.Date()),
+                 get = "stock.prices")
+
+# ändert den col Namen symbol zu ticker
+prices <- prices %>% 
+    rename(
+      ticker = symbol,
+    )
+# erstellt einen data frame mit den Preisen der letzten 5 Jahr eim Jahresabstand
+# Achtung fehleranfällig wenn das das Datum nicht im df prices vorkommt
+return_rate_d <- prices[prices$date == start_date, ]
+return_rate_d <- bind_rows(return_rate_d, prices[prices$date == year1, ], 
+               prices[prices$date == year2, ], 
+               prices[prices$date == year3, ],
+               prices[prices$date == year4, ],
+               prices[prices$date == lastdate, ])
+
+# berechnet mit den Preisen des df return_rate_ddie return rate 
+# für die Unternehmen
+return_rate_NKE <- return_rate_d[return_rate_d$ticker == "NKE", ]
+return_rate_NKE <- (return_rate_NKE$adjusted[2:6]-
+                    return_rate_NKE$adjusted[1:5])/return_rate_NKE$adjusted[1:5]
+
+return_rate_SP500 <- return_rate_d[return_rate_d$ticker == "^GSPC", ]
+return_rate_SP500 <- (return_rate_SP500$adjusted[2:6]-
+                return_rate_SP500$adjusted[1:5])/return_rate_SP500$adjusted[1:5]
+
+return_rate_adi <- return_rate_d[return_rate_d$ticker == "ADDYY", ]
+return_rate_adi <- (return_rate_adi$adjusted[2:6]-
+                    return_rate_adi$adjusted[1:5])/return_rate_adi$adjusted[1:5]
+
+return_rate_ua <- return_rate_d[return_rate_d$ticker == "UA", ]
+return_rate_ua <- (return_rate_ua$adjusted[2:6]-
+                     return_rate_ua$adjusted[1:5])/return_rate_ua$adjusted[1:5]
+# die Variable x stellt den eingestzten Wert ein, um das Wachstum der Unternehmen
+# und SP500 zu vergleichen
+x <- 1000
+
+# Berechnet den Return der Unternehmen und des SP500 mit einem Startwert von
+# 1000 $
+m_return_NKE <- c(x, x*return_rate_NKE[1]+x, (x*return_rate_NKE[1]+x)*return_rate_NKE[2]+(x*return_rate_NKE[1]+x))
+m_return_NKE <- c(m_return_NKE, m_return_NKE[3]*return_rate_NKE[3]+m_return_NKE[3])
+m_return_NKE <- c(m_return_NKE, m_return_NKE[4]*return_rate_NKE[4]+m_return_NKE[4])
+m_return_NKE <- c(m_return_NKE, m_return_NKE[5]*return_rate_NKE[5]+m_return_NKE[5])
+m_return_NKE <- data.frame(m_return_NKE)
+
+m_return_SP500 <- c(x, x*return_rate_SP500[1]+x, (x*return_rate_SP500[1]+x)*return_rate_SP500[2]+(x*return_rate_SP500[1]+x))
+m_return_SP500 <- c(m_return_SP500, m_return_SP500[3]*return_rate_SP500[3]+m_return_SP500[3])
+m_return_SP500 <- c(m_return_SP500, m_return_SP500[4]*return_rate_SP500[4]+m_return_SP500[4])
+m_return_SP500 <- c(m_return_SP500, m_return_SP500[5]*return_rate_SP500[5]+m_return_SP500[5])
+m_return_SP500 <- data.frame(m_return_SP500)
+
+m_return_adi <- c(x, x*return_rate_adi[1]+x, (x*return_rate_adi[1]+x)*return_rate_adi[2]+(x*return_rate_adi[1]+x))
+m_return_adi <- c(m_return_adi, m_return_adi[3]*return_rate_adi[3]+m_return_adi[3])
+m_return_adi <- c(m_return_adi, m_return_adi[4]*return_rate_adi[4]+m_return_adi[4])
+m_return_adi <- c(m_return_adi, m_return_adi[5]*return_rate_adi[5]+m_return_adi[5])
+m_return_adi <- data.frame(m_return_adi)
+
+m_return_ua <- c(x, x*return_rate_ua[1]+x, (x*return_rate_ua[1]+x)*return_rate_ua[2]+(x*return_rate_ua[1]+x))
+m_return_ua <- c(m_return_ua, m_return_ua[3]*return_rate_ua[3]+m_return_ua[3])
+m_return_ua <- c(m_return_ua, m_return_ua[4]*return_rate_ua[4]+m_return_ua[4])
+m_return_ua <- c(m_return_ua, m_return_ua[5]*return_rate_ua[5]+m_return_ua[5])
+m_return_ua <- data.frame(m_return_ua)
+
+Year <- year(c(start_date,year1,year2,year3,year4,lastdate))
+Year <- data.frame(Year)
+
+
+
+# erstellt einen df aus den variablen der returns, kurzzeitig ungünstige col
+# namen
+return_df <- bind_cols(Year, m_return_NKE, m_return_SP500, m_return_adi, m_return_ua)
+
+return_df <- return_df %>% 
+    rename(
+      Nike = m_return_NKE,
+      SP500 = m_return_SP500,
+      Adidas = m_return_adi,
+      UA = m_return_ua
+    )
+
+# wandelt den df um
+mel_return_df <- reshape2::melt(return_df, id.var = "Year")
+mel_return_df$value <- round(mel_return_df$value)
+
+# entnimmt dem df nur die Werte des aktuellen Jahres und zieht das
+# eingesetzte Investment ab
+return_to_date <- return_df[return_df$Year == "2022", ]
+return_to_date <- return_to_date[2:5]-1000
+
+# Berechnet den Jährlichen Return über die letzten 5 Jahre
+avg_RR <- ((return_to_date[1:4]/1000*100)/5)
+
+return_to_date <- bind_rows(return_to_date,avg_RR)
+# dreht die Tabelle durch verschieben der cols zu rows 
+return_to_date <- t(round(return_to_date,2))
+
+colnames(return_to_date) <- c("return in $","Yearly avg. return [%]")
+
+# weißt der variable ein das minimal theme zu, damit dieses im folgenden graphen
+# auf die in den Graphen eingefügte Tabelle angewandt werden kann, was die Optik
+# verbessert
+tt2 <- ttheme_minimal()
+# erstellt ein Diagramm für das return auf ein investment von 1000 $
+return_plot <- mel_return_df %>%
+          ggplot(aes(x = Year, y = value, color = variable)) +
+          # Liniendiagramm
+          geom_line()+
+          # zusätzlich Punkte zu besseren veranschaulichung der Daten
+          geom_point()+#
+          theme_classic()+
+          theme(legend.position="top",
+          legend.title=element_blank())+
+          labs(x = 'Year',
+           y = "Return in USD",
+           title = "Return on investment of 1000$")+
+        # fügt den df return_to_date mit dem theme tt2 in den plot ein
+        annotation_custom(tableGrob(return_to_date, theme = tt2),
+                    xmin=2018.2, xmax=2018.3, ymin=2000, ymax=3000)
+
+print(return_plot)
+```
+
+```{r, Zusammenfassung}
+# Erstellen eines PLots nur für Nike und einfügen der Kerndaten
+ticker <- "NKE"
+
+# entnimmt die Preise für die eingefügten Ticker (incl. Volumen)
+prices <- tq_get(ticker,
+                 from = start_date,
+                 to = format(Sys.Date()),
+                 get = "stock.prices")
+
+# ändert den col Namen symbol zu ticker
+prices <- prices %>% 
+    rename(
+      ticker = symbol,
+    )
+# durschnittlicher Aktienkurs der letzten 5 Jahre von Nike
+mean_NKE_price <- round(mean(prices$adjusted),2)
+mean_NKE_price <- data.frame(mean_NKE_price)
+
+# Fügt Kerndaten zu einem df zusammen
+Stock_info <- c(Stock$list[5],Stock$list[6],
+                        PPS_data$`2022`[6], round(PPS_data$`2022`[8]*100))
+Stock_info <- data.frame(Stock_info)
+
+# erstellt einen plot für den ticker in welchem Kerndaten enthalten sind
+# sowie der Aktienkurs der ltezten 5 Jahre
+ticker_plot <- prices %>%
+          ggplot(aes(x = date, y = adjusted, color = ticker)) +
+          geom_line()+
+          # fügt den Mittelwert in Form einer Linie ein
+          geom_hline(data = mean_NKE_price, aes(yintercept = mean_NKE_price,
+                                                color = ticker))+
+          # fügt den Implied Share Price in Form einer Linie ein
+          geom_hline(data = Stock_info, aes(yintercept = X149, colour = "ISP"),
+                                                show.legend = F)+
+          theme_classic()+
+          labs(x = 'Year',
+           y = "Stock Price in USD",
+           title = "Nike Stock Price past 5 Years")+
+          # fügt den Linien ober die dazugehörende Werten hinzu
+          geom_text(data = mean_NKE_price, aes(x = prices$date[250],
+                                              y = mean_NKE_price, 
+                                              label = paste("avg.",
+                                            mean_NKE_price, Stock$list$Currency), 
+                                            vjust = -0.3), show.legend = F)+
+          theme(legend.position="right",
+          legend.title=element_blank())
+
+# entfernt optisch den Reihennamen damit die Tabelle besser im Plot aussieht
+rownames(Stock_info) <- ""
+
+Stock_info <- Stock_info %>% 
+    rename(
+      "Price [$]" = Price,
+      "ISP [$]" = X149,
+      "Discount [%]" = X26,
+    )
+# fügt den df Stock_Info mit dem theme tt2 in den plot ein
+ticker_plot <- ticker_plot +
+  annotation_custom(tableGrob(Stock_info, theme = tt2), xmin=prices$date[400], 
+                    xmax=prices$date[450], ymin=160, ymax=170)
+print(ticker_plot)
 ```

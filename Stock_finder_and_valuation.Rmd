@@ -91,7 +91,7 @@ rm(Ticker)
 Stocks <- basics_assignement(Stocks)
 Stocks <- Stocks$list
 ```
-$$\sum_{i=1}^n X_i$$
+$$uFCF= \sum_{i=1}^n X_i$$
 ```{r Scraper and Calculation on List, results='hide'}
   toassaign_df <- Stocks
   x<-1
