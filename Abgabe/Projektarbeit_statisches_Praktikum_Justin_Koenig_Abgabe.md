@@ -247,8 +247,8 @@ grViz("digraph flowchart {
 ```
 
 ```{=html}
-<div id="htmlwidget-3f727138d87536e18c00" style="width:672px;height:480px;" class="grViz html-widget"></div>
-<script type="application/json" data-for="htmlwidget-3f727138d87536e18c00">{"x":{"diagram":"digraph flowchart {\n        # graph statement\n\n         graph [layout = dot,\n         rankdir = TB,\n         fontsize = 8]\n\n  # definition der nodes mit dem substituierten label text\n      node [fontname = Helvetica, shape = rectangle]        \n      tab1 [label = \"ticker\"]\n      tab2 [label = \"Data Scraping\"]\n      tab3 [label = \"Data Assignement\"]\n      tab4 [label = \"last row of df?\"]\n      tab5 [label = \"next Row\"]\n      tab6 [label = \"true\"]\n      tab7 [label = \"false\"]\n      tab8 [label = \"assignement finished\"]\n     \n      # edges\n      # definiert die node und die darauffolgenden mit hilfe der node id\n      tab1 -> tab2 -> tab3 -> tab4 -> tab6 ->tab8 \n      tab4 -> tab7 \n      tab7 -> tab5[label = \"counter + 1\"]\n      tab5 -> tab1\n}\n\n      # die dargestellten Titel der nodes","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-e58c9daf6c3b4e7746e2" style="width:672px;height:480px;" class="grViz html-widget"></div>
+<script type="application/json" data-for="htmlwidget-e58c9daf6c3b4e7746e2">{"x":{"diagram":"digraph flowchart {\n        # graph statement\n\n         graph [layout = dot,\n         rankdir = TB,\n         fontsize = 8]\n\n  # definition der nodes mit dem substituierten label text\n      node [fontname = Helvetica, shape = rectangle]        \n      tab1 [label = \"ticker\"]\n      tab2 [label = \"Data Scraping\"]\n      tab3 [label = \"Data Assignement\"]\n      tab4 [label = \"last row of df?\"]\n      tab5 [label = \"next Row\"]\n      tab6 [label = \"true\"]\n      tab7 [label = \"false\"]\n      tab8 [label = \"assignement finished\"]\n     \n      # edges\n      # definiert die node und die darauffolgenden mit hilfe der node id\n      tab1 -> tab2 -> tab3 -> tab4 -> tab6 ->tab8 \n      tab4 -> tab7 \n      tab7 -> tab5[label = \"counter + 1\"]\n      tab5 -> tab1\n}\n\n      # die dargestellten Titel der nodes","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
 ```
 
 Nach der Zuweisung der Daten mittels while Schleifen werden die
@@ -291,8 +291,8 @@ grViz("digraph flowchart {
 ```
 
 ```{=html}
-<div id="htmlwidget-f0fe7a3f886d4873c200" style="width:672px;height:480px;" class="grViz html-widget"></div>
-<script type="application/json" data-for="htmlwidget-f0fe7a3f886d4873c200">{"x":{"diagram":"digraph flowchart {\n      # definition der nodes mit dem substituierten label text\n      node [fontname = Helvetica, shape = rectangle]        \n      tab1 [label = \"Stocks\"]\n      tab2 [label = \"Non Financial Stocks\"]\n      tab3 [label = \"Financial Stocks\"]\n      tab4 [label = \"Price lower as DCF implied share price\"]\n      tab5 [label = \"Top 2 highest ISP diff to Price\"]\n      tab6 [label = \"Picks to watch\"]\n      tab7 [label = \"Deeper analysis\"]\n      tab8 [label = \"P/B between 0 and 1.5\"]\n      tab9 [label = \"Top 2 lowest P/B\"]\n     \n      # definiert die node und die darauffolgenden mit hilfe der node id\n      tab1 -> tab2 -> tab4 -> tab5 -> tab6 -> tab7\n      tab1 -> tab3 -> tab8 -> tab9 -> tab6\n}\n      # die dargestellten Titel der nodes","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-447c6b1f61aeaf3d7604" style="width:672px;height:480px;" class="grViz html-widget"></div>
+<script type="application/json" data-for="htmlwidget-447c6b1f61aeaf3d7604">{"x":{"diagram":"digraph flowchart {\n      # definition der nodes mit dem substituierten label text\n      node [fontname = Helvetica, shape = rectangle]        \n      tab1 [label = \"Stocks\"]\n      tab2 [label = \"Non Financial Stocks\"]\n      tab3 [label = \"Financial Stocks\"]\n      tab4 [label = \"Price lower as DCF implied share price\"]\n      tab5 [label = \"Top 2 highest ISP diff to Price\"]\n      tab6 [label = \"Picks to watch\"]\n      tab7 [label = \"Deeper analysis\"]\n      tab8 [label = \"P/B between 0 and 1.5\"]\n      tab9 [label = \"Top 2 lowest P/B\"]\n     \n      # definiert die node und die darauffolgenden mit hilfe der node id\n      tab1 -> tab2 -> tab4 -> tab5 -> tab6 -> tab7\n      tab1 -> tab3 -> tab8 -> tab9 -> tab6\n}\n      # die dargestellten Titel der nodes","config":{"engine":"dot","options":null}},"evals":[],"jsHooks":[]}</script>
 ```
 
 Nach dem Sammeln, Berechnen und Zuweisen der Daten werden diese mit
@@ -729,7 +729,6 @@ DCF_table_CYE <-
 )
 rm(Year,start_date,p_of_EBIT,p_growth_Rev,p_growth_FCF,Operating_Margin,droping,
    DandA_p_of_Rev,cNWC_p_of_Rev,CapEx_p_of_Rev, ticker)
-DCF_table_CYE
 ```
 
 
@@ -1110,12 +1109,12 @@ DCF_table_CYE
 ```
 
 ```{=html}
-<div id="ywdtmuurvf" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="jehjsnfiej" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#ywdtmuurvf .gt_table {
+#jehjsnfiej .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -1140,7 +1139,7 @@ DCF_table_CYE
   border-left-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_heading {
+#jehjsnfiej .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -1152,7 +1151,7 @@ DCF_table_CYE
   border-right-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_title {
+#jehjsnfiej .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -1164,7 +1163,7 @@ DCF_table_CYE
   border-bottom-width: 0;
 }
 
-#ywdtmuurvf .gt_subtitle {
+#jehjsnfiej .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -1176,13 +1175,13 @@ DCF_table_CYE
   border-top-width: 0;
 }
 
-#ywdtmuurvf .gt_bottom_border {
+#jehjsnfiej .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_col_headings {
+#jehjsnfiej .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1197,7 +1196,7 @@ DCF_table_CYE
   border-right-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_col_heading {
+#jehjsnfiej .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1217,7 +1216,7 @@ DCF_table_CYE
   overflow-x: hidden;
 }
 
-#ywdtmuurvf .gt_column_spanner_outer {
+#jehjsnfiej .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1229,15 +1228,15 @@ DCF_table_CYE
   padding-right: 4px;
 }
 
-#ywdtmuurvf .gt_column_spanner_outer:first-child {
+#jehjsnfiej .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#ywdtmuurvf .gt_column_spanner_outer:last-child {
+#jehjsnfiej .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#ywdtmuurvf .gt_column_spanner {
+#jehjsnfiej .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -1249,7 +1248,7 @@ DCF_table_CYE
   width: 100%;
 }
 
-#ywdtmuurvf .gt_group_heading {
+#jehjsnfiej .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1274,7 +1273,7 @@ DCF_table_CYE
   vertical-align: middle;
 }
 
-#ywdtmuurvf .gt_empty_group_heading {
+#jehjsnfiej .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1289,15 +1288,15 @@ DCF_table_CYE
   vertical-align: middle;
 }
 
-#ywdtmuurvf .gt_from_md > :first-child {
+#jehjsnfiej .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#ywdtmuurvf .gt_from_md > :last-child {
+#jehjsnfiej .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#ywdtmuurvf .gt_row {
+#jehjsnfiej .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1316,7 +1315,7 @@ DCF_table_CYE
   overflow-x: hidden;
 }
 
-#ywdtmuurvf .gt_stub {
+#jehjsnfiej .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1329,7 +1328,7 @@ DCF_table_CYE
   padding-right: 5px;
 }
 
-#ywdtmuurvf .gt_stub_row_group {
+#jehjsnfiej .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1343,11 +1342,11 @@ DCF_table_CYE
   vertical-align: top;
 }
 
-#ywdtmuurvf .gt_row_group_first td {
+#jehjsnfiej .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#ywdtmuurvf .gt_summary_row {
+#jehjsnfiej .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1357,16 +1356,16 @@ DCF_table_CYE
   padding-right: 5px;
 }
 
-#ywdtmuurvf .gt_first_summary_row {
+#jehjsnfiej .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_first_summary_row.thick {
+#jehjsnfiej .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#ywdtmuurvf .gt_last_summary_row {
+#jehjsnfiej .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1376,7 +1375,7 @@ DCF_table_CYE
   border-bottom-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_grand_summary_row {
+#jehjsnfiej .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1386,7 +1385,7 @@ DCF_table_CYE
   padding-right: 5px;
 }
 
-#ywdtmuurvf .gt_first_grand_summary_row {
+#jehjsnfiej .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1396,11 +1395,11 @@ DCF_table_CYE
   border-top-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_striped {
+#jehjsnfiej .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#ywdtmuurvf .gt_table_body {
+#jehjsnfiej .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1409,7 +1408,7 @@ DCF_table_CYE
   border-bottom-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_footnotes {
+#jehjsnfiej .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1423,7 +1422,7 @@ DCF_table_CYE
   border-right-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_footnote {
+#jehjsnfiej .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-left: 4px;
@@ -1432,7 +1431,7 @@ DCF_table_CYE
   padding-right: 5px;
 }
 
-#ywdtmuurvf .gt_sourcenotes {
+#jehjsnfiej .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -1446,7 +1445,7 @@ DCF_table_CYE
   border-right-color: #D3D3D3;
 }
 
-#ywdtmuurvf .gt_sourcenote {
+#jehjsnfiej .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -1454,64 +1453,64 @@ DCF_table_CYE
   padding-right: 5px;
 }
 
-#ywdtmuurvf .gt_left {
+#jehjsnfiej .gt_left {
   text-align: left;
 }
 
-#ywdtmuurvf .gt_center {
+#jehjsnfiej .gt_center {
   text-align: center;
 }
 
-#ywdtmuurvf .gt_right {
+#jehjsnfiej .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#ywdtmuurvf .gt_font_normal {
+#jehjsnfiej .gt_font_normal {
   font-weight: normal;
 }
 
-#ywdtmuurvf .gt_font_bold {
+#jehjsnfiej .gt_font_bold {
   font-weight: bold;
 }
 
-#ywdtmuurvf .gt_font_italic {
+#jehjsnfiej .gt_font_italic {
   font-style: italic;
 }
 
-#ywdtmuurvf .gt_super {
+#jehjsnfiej .gt_super {
   font-size: 65%;
 }
 
-#ywdtmuurvf .gt_footnote_marks {
+#jehjsnfiej .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 75%;
   vertical-align: 0.4em;
 }
 
-#ywdtmuurvf .gt_asterisk {
+#jehjsnfiej .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#ywdtmuurvf .gt_indent_1 {
+#jehjsnfiej .gt_indent_1 {
   text-indent: 5px;
 }
 
-#ywdtmuurvf .gt_indent_2 {
+#jehjsnfiej .gt_indent_2 {
   text-indent: 10px;
 }
 
-#ywdtmuurvf .gt_indent_3 {
+#jehjsnfiej .gt_indent_3 {
   text-indent: 15px;
 }
 
-#ywdtmuurvf .gt_indent_4 {
+#jehjsnfiej .gt_indent_4 {
   text-indent: 20px;
 }
 
-#ywdtmuurvf .gt_indent_5 {
+#jehjsnfiej .gt_indent_5 {
   text-indent: 25px;
 }
 </style>
@@ -1661,10 +1660,10 @@ DCF_table_CYE
 <td class="gt_row gt_right">NA</td>
 <td class="gt_row gt_right">NA</td>
 <td class="gt_row gt_right" style="background-color: #00B2EE;">$6,442</td>
-<td class="gt_row gt_right" style="background-color: #00B2EE;">$6,575</td>
-<td class="gt_row gt_right" style="background-color: #00B2EE;">$6,632</td>
-<td class="gt_row gt_right" style="background-color: #00B2EE;">$6,763</td>
-<td class="gt_row gt_right" style="background-color: #00B2EE;">$6,755</td></tr>
+<td class="gt_row gt_right" style="background-color: #00B2EE;">$6,574</td>
+<td class="gt_row gt_right" style="background-color: #00B2EE;">$6,631</td>
+<td class="gt_row gt_right" style="background-color: #00B2EE;">$6,762</td>
+<td class="gt_row gt_right" style="background-color: #00B2EE;">$6,753</td></tr>
   </tbody>
   
   
@@ -1695,12 +1694,12 @@ PPS_table
 ```
 
 ```{=html}
-<div id="zewawmcmbu" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
+<div id="bignqconxj" style="overflow-x:auto;overflow-y:auto;width:auto;height:auto;">
 <style>html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Helvetica Neue', 'Fira Sans', 'Droid Sans', Arial, sans-serif;
 }
 
-#zewawmcmbu .gt_table {
+#bignqconxj .gt_table {
   display: table;
   border-collapse: collapse;
   margin-left: auto;
@@ -1725,7 +1724,7 @@ PPS_table
   border-left-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_heading {
+#bignqconxj .gt_heading {
   background-color: #FFFFFF;
   text-align: center;
   border-bottom-color: #FFFFFF;
@@ -1737,7 +1736,7 @@ PPS_table
   border-right-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_title {
+#bignqconxj .gt_title {
   color: #333333;
   font-size: 125%;
   font-weight: initial;
@@ -1749,7 +1748,7 @@ PPS_table
   border-bottom-width: 0;
 }
 
-#zewawmcmbu .gt_subtitle {
+#bignqconxj .gt_subtitle {
   color: #333333;
   font-size: 85%;
   font-weight: initial;
@@ -1761,13 +1760,13 @@ PPS_table
   border-top-width: 0;
 }
 
-#zewawmcmbu .gt_bottom_border {
+#bignqconxj .gt_bottom_border {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_col_headings {
+#bignqconxj .gt_col_headings {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1782,7 +1781,7 @@ PPS_table
   border-right-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_col_heading {
+#bignqconxj .gt_col_heading {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1802,7 +1801,7 @@ PPS_table
   overflow-x: hidden;
 }
 
-#zewawmcmbu .gt_column_spanner_outer {
+#bignqconxj .gt_column_spanner_outer {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1814,15 +1813,15 @@ PPS_table
   padding-right: 4px;
 }
 
-#zewawmcmbu .gt_column_spanner_outer:first-child {
+#bignqconxj .gt_column_spanner_outer:first-child {
   padding-left: 0;
 }
 
-#zewawmcmbu .gt_column_spanner_outer:last-child {
+#bignqconxj .gt_column_spanner_outer:last-child {
   padding-right: 0;
 }
 
-#zewawmcmbu .gt_column_spanner {
+#bignqconxj .gt_column_spanner {
   border-bottom-style: solid;
   border-bottom-width: 2px;
   border-bottom-color: #D3D3D3;
@@ -1834,7 +1833,7 @@ PPS_table
   width: 100%;
 }
 
-#zewawmcmbu .gt_group_heading {
+#bignqconxj .gt_group_heading {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1859,7 +1858,7 @@ PPS_table
   vertical-align: middle;
 }
 
-#zewawmcmbu .gt_empty_group_heading {
+#bignqconxj .gt_empty_group_heading {
   padding: 0.5px;
   color: #333333;
   background-color: #FFFFFF;
@@ -1874,15 +1873,15 @@ PPS_table
   vertical-align: middle;
 }
 
-#zewawmcmbu .gt_from_md > :first-child {
+#bignqconxj .gt_from_md > :first-child {
   margin-top: 0;
 }
 
-#zewawmcmbu .gt_from_md > :last-child {
+#bignqconxj .gt_from_md > :last-child {
   margin-bottom: 0;
 }
 
-#zewawmcmbu .gt_row {
+#bignqconxj .gt_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1901,7 +1900,7 @@ PPS_table
   overflow-x: hidden;
 }
 
-#zewawmcmbu .gt_stub {
+#bignqconxj .gt_stub {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1914,7 +1913,7 @@ PPS_table
   padding-right: 5px;
 }
 
-#zewawmcmbu .gt_stub_row_group {
+#bignqconxj .gt_stub_row_group {
   color: #333333;
   background-color: #FFFFFF;
   font-size: 100%;
@@ -1928,11 +1927,11 @@ PPS_table
   vertical-align: top;
 }
 
-#zewawmcmbu .gt_row_group_first td {
+#bignqconxj .gt_row_group_first td {
   border-top-width: 2px;
 }
 
-#zewawmcmbu .gt_summary_row {
+#bignqconxj .gt_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1942,16 +1941,16 @@ PPS_table
   padding-right: 5px;
 }
 
-#zewawmcmbu .gt_first_summary_row {
+#bignqconxj .gt_first_summary_row {
   border-top-style: solid;
   border-top-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_first_summary_row.thick {
+#bignqconxj .gt_first_summary_row.thick {
   border-top-width: 2px;
 }
 
-#zewawmcmbu .gt_last_summary_row {
+#bignqconxj .gt_last_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1961,7 +1960,7 @@ PPS_table
   border-bottom-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_grand_summary_row {
+#bignqconxj .gt_grand_summary_row {
   color: #333333;
   background-color: #FFFFFF;
   text-transform: inherit;
@@ -1971,7 +1970,7 @@ PPS_table
   padding-right: 5px;
 }
 
-#zewawmcmbu .gt_first_grand_summary_row {
+#bignqconxj .gt_first_grand_summary_row {
   padding-top: 8px;
   padding-bottom: 8px;
   padding-left: 5px;
@@ -1981,11 +1980,11 @@ PPS_table
   border-top-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_striped {
+#bignqconxj .gt_striped {
   background-color: rgba(128, 128, 128, 0.05);
 }
 
-#zewawmcmbu .gt_table_body {
+#bignqconxj .gt_table_body {
   border-top-style: solid;
   border-top-width: 2px;
   border-top-color: #D3D3D3;
@@ -1994,7 +1993,7 @@ PPS_table
   border-bottom-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_footnotes {
+#bignqconxj .gt_footnotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2008,7 +2007,7 @@ PPS_table
   border-right-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_footnote {
+#bignqconxj .gt_footnote {
   margin: 0px;
   font-size: 90%;
   padding-left: 4px;
@@ -2017,7 +2016,7 @@ PPS_table
   padding-right: 5px;
 }
 
-#zewawmcmbu .gt_sourcenotes {
+#bignqconxj .gt_sourcenotes {
   color: #333333;
   background-color: #FFFFFF;
   border-bottom-style: none;
@@ -2031,7 +2030,7 @@ PPS_table
   border-right-color: #D3D3D3;
 }
 
-#zewawmcmbu .gt_sourcenote {
+#bignqconxj .gt_sourcenote {
   font-size: 90%;
   padding-top: 4px;
   padding-bottom: 4px;
@@ -2039,64 +2038,64 @@ PPS_table
   padding-right: 5px;
 }
 
-#zewawmcmbu .gt_left {
+#bignqconxj .gt_left {
   text-align: left;
 }
 
-#zewawmcmbu .gt_center {
+#bignqconxj .gt_center {
   text-align: center;
 }
 
-#zewawmcmbu .gt_right {
+#bignqconxj .gt_right {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-#zewawmcmbu .gt_font_normal {
+#bignqconxj .gt_font_normal {
   font-weight: normal;
 }
 
-#zewawmcmbu .gt_font_bold {
+#bignqconxj .gt_font_bold {
   font-weight: bold;
 }
 
-#zewawmcmbu .gt_font_italic {
+#bignqconxj .gt_font_italic {
   font-style: italic;
 }
 
-#zewawmcmbu .gt_super {
+#bignqconxj .gt_super {
   font-size: 65%;
 }
 
-#zewawmcmbu .gt_footnote_marks {
+#bignqconxj .gt_footnote_marks {
   font-style: italic;
   font-weight: normal;
   font-size: 75%;
   vertical-align: 0.4em;
 }
 
-#zewawmcmbu .gt_asterisk {
+#bignqconxj .gt_asterisk {
   font-size: 100%;
   vertical-align: 0;
 }
 
-#zewawmcmbu .gt_indent_1 {
+#bignqconxj .gt_indent_1 {
   text-indent: 5px;
 }
 
-#zewawmcmbu .gt_indent_2 {
+#bignqconxj .gt_indent_2 {
   text-indent: 10px;
 }
 
-#zewawmcmbu .gt_indent_3 {
+#bignqconxj .gt_indent_3 {
   text-indent: 15px;
 }
 
-#zewawmcmbu .gt_indent_4 {
+#bignqconxj .gt_indent_4 {
   text-indent: 20px;
 }
 
-#zewawmcmbu .gt_indent_5 {
+#bignqconxj .gt_indent_5 {
   text-indent: 25px;
 }
 </style>
@@ -2117,21 +2116,21 @@ PPS_table
   </thead>
   <tbody class="gt_table_body">
     <tr><td class="gt_row gt_left">Total PV of proj. FCF</td>
-<td class="gt_row gt_right">$33,167</td></tr>
+<td class="gt_row gt_right">$33,162</td></tr>
     <tr><td class="gt_row gt_left">PV Terminal VAlue</td>
-<td class="gt_row gt_right">$138,626</td></tr>
+<td class="gt_row gt_right">$138,350</td></tr>
     <tr><td class="gt_row gt_left">Enterprise Value</td>
-<td class="gt_row gt_right">$171,793</td></tr>
+<td class="gt_row gt_right">$171,511</td></tr>
     <tr><td class="gt_row gt_left">Equity Value</td>
-<td class="gt_row gt_right">$180,367</td></tr>
+<td class="gt_row gt_right">$180,085</td></tr>
     <tr><td class="gt_row gt_left">Shares outstanding</td>
 <td class="gt_row gt_right">1247</td></tr>
     <tr><td class="gt_row gt_left">Implied Share Price<sup class="gt_footnote_marks">1</sup></td>
-<td class="gt_row gt_right" style="background-color: #00B2EE;">$145</td></tr>
+<td class="gt_row gt_right" style="background-color: #00B2EE;">$144</td></tr>
     <tr><td class="gt_row gt_left">Current Share Price<sup class="gt_footnote_marks">1</sup></td>
-<td class="gt_row gt_right">$105</td></tr>
+<td class="gt_row gt_right">$104</td></tr>
     <tr><td class="gt_row gt_left">Discount<sup class="gt_footnote_marks">1</sup></td>
-<td class="gt_row gt_right">27.7%</td></tr>
+<td class="gt_row gt_right">27.9%</td></tr>
   </tbody>
   
   <tfoot class="gt_footnotes">
