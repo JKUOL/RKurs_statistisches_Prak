@@ -33,7 +33,8 @@ cat("\014")
 # setzt das working directory auf den Pfad, in welchem die Datei gespeichert ist
 # ab und an kommt Fehlermeldung zu setwd() bei Manuellem laufen lassen des chunks erscheint diese nicht
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
-
+# Zeigt das aktuelle Arbeitsverzeichnis an
+getwd()
 # sourced die Funktionen aus dem Ordner functions aus dem WD
 source("functions/basics_data.R")
 source("functions/basics_assignement.R")
@@ -1140,7 +1141,7 @@ print(bar_graph_rev_EBIT)
 
 In der Tabelle Price per Share sind einmal die berechneten
 Unternehmenswerte sowie die Aktien im Umlauf für das Jahr 2022 zu sehen.
-Aus den gegeben Werten wird ein implied share Price von 144.27\$ berechnet.
+Aus den gegeben Werten wird ein implied share Price von 144\$ berechnet.
 Dieser Wert liegt 28% unter dem aktuellen Aktienkurse von Nike Inc. und
 deutet somit auf ein Kaufsignal hin
 
@@ -1151,10 +1152,11 @@ PPS_table
 In der Graphik Return on investment of 1000\$ sind die Returns von Nike,
 sowie des S&P500, Adidas und Under Armour dargestellt der letzten 5
 Jahre auf ein Investment von 1000\$ dargestellt. Es ist direkt zu
-erkennen, dass Nike mit einem return von 1108.57\$, sowohl die
+erkennen, dass Nike mit einem return von 1070.09\$, sowohl die
 Konkurenz, welche negative Zahlen hervorbrachte, sowie den S&P500
 schlägt. Dieser hatte im gleichen Zeitraum einen Return von "nur"
-574.22\$. Nike weist somit einen Jährlichen Return von 22.17% über die letzten 5 Jahre auf. 
+555.41\$. Nike weist somit einen Jährlichen Return von 21.4% über die
+letzten 5 Jahre auf.
 
 ```{r Return vergleich}
 print(return_plot)
@@ -1172,9 +1174,9 @@ print(ticker_plot)
 
 ## Schluss
 
-Bei der Betrachtung des implied share prices von 144.27\$, spricht viele
+Bei der Betrachtung des implied share prices von 144.44\$, spricht viele
 für ein Kaufsignal für das Unternehmen Nike Inc.. Durch den aktuellen
-Aktienpreis von 104.45\$, gibt es eine große margin of safty von 28%.
+Aktienpreis von 104.12\$, gibt es eine große margin of safty von 28%.
 Außerdem könnte die Annäherung des Aktienkurses an den mittleren
 Aktienkurs der letzten 5 Jahre ein weiteres Kaufsignal darstellen. Bei
 Nike Inc. handelt es sich um den Marktführer in der Kategorie
@@ -1183,4 +1185,4 @@ eventueller starker Rezession die Mittel haben, diese zu überstehen.
 Disclosure zum Schluss der Author dieses Berichts erwarb nach Beendigung
 diesens Anteile an Nike Inc..
 
-## Literaturverzeichniss
+## Literatur- und packageverzeichnis
